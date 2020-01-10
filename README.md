@@ -1,6 +1,7 @@
 # rview (rview)
 
 Rhino model viewer
+https://mcneel.github.io/rview/#/
 
 ## Install the dependencies
 ```bash

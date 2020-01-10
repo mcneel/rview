@@ -5,7 +5,7 @@
       size="xl"
     >
       <q-avatar rounded size="xl">
-        <img src='/statics/logo.png'>
+        <img src='statics/logo.png'>
       </q-avatar>
       <div>Sample</div>
     </q-btn>
@@ -61,7 +61,7 @@ function openFile (router) {
 export default {
   methods: {
     openSample () {
-      let fetchPromise = fetch('/statics/hello_mesh.3dm')
+      let fetchPromise = fetch('statics/hello_mesh.3dm')
       fetchPromise.then((res) => {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
