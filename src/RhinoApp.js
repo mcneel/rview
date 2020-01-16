@@ -12,6 +12,31 @@ let _viewmodel = {
   }]
 }
 
+function addToDictionary (dictionary, chunks) {
+  chunks.forEach((chunk) => {
+    if (!dictionary.hasOwnProperty(chunk)) {
+      dictionary[chunk] = {}
+    }
+    dictionary = dictionary[chunk]
+  })
+}
+
+function createNodes (dictionary) {
+  let nodes = []
+  let names = Object.getOwnPropertyNames(dictionary)
+  names.forEach((name) => {
+    let node = {
+      label: name
+    }
+    let childNodes = createNodes(dictionary[name])
+    if (childNodes.length > 0) {
+      node.children = childNodes
+    }
+    nodes.push(node)
+  })
+  return nodes
+}
+
 let RhinoApp = {
   init (rh3dm, startwait, endwait) {
     if (_rhino3dm == null) {
@@ -43,14 +68,17 @@ let RhinoApp = {
     if (doc) {
       let layers = doc.layers()
       let count = layers.count()
+      let topLayers = {}
       for (let i = 0; i < count; i++) {
         let layer = layers.get(i)
-        let node = {
-          label: layer.name
-        }
-        _viewmodel.layers[0].children.push(node)
+        let fullpath = layer.fullPath
         layer.delete()
+        let chunks = fullpath.split('::')
+        addToDictionary(topLayers, chunks)
       }
+
+      _viewmodel.layers[0].children = createNodes(topLayers)
+
       layers.delete()
     }
 
