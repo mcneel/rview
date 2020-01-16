@@ -13,6 +13,11 @@ yarn
 quasar dev
 ```
 
+NOTE: you may need to install quasar cli first
+```
+yarn global add @quasar/cli
+```
+
 ### Lint the files
 ```bash
 yarn run lint
