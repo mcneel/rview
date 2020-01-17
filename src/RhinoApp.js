@@ -1,6 +1,6 @@
 let _rhino3dm = null
 let _activeDoc = null
-let _activeDocEventWatcher = null
+let _activeDocEventWatchers = []
 let _viewmodel = {
   docExists: false,
   filename: '',
@@ -82,15 +82,13 @@ let RhinoApp = {
       layers.delete()
     }
 
-    if (_activeDocEventWatcher) {
-      _activeDocEventWatcher()
-    }
+    _activeDocEventWatchers.forEach((ew) => { ew() })
   },
   getActiveDoc () {
     return _activeDoc
   },
-  setActiveDocChangedEventWatcher (eventWatcher) {
-    _activeDocEventWatcher = eventWatcher
+  addActiveDocChangedEventWatcher (eventWatcher) {
+    _activeDocEventWatchers.push(eventWatcher)
   }
 }
 

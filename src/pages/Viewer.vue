@@ -18,6 +18,13 @@ function createScene () {
   }
   _scene = new THREE.Scene()
   _scene.background = new THREE.Color(0.9, 0.9, 0.9)
+  //  add a couple lights
+  let light = new THREE.DirectionalLight(0xffffff)
+  light.position.set(0, 0, 1)
+  _scene.add(light)
+  let light2 = new THREE.DirectionalLight(0x666666)
+  light2.position.set(0.2, 0.2, -1)
+  _scene.add(light2)
 }
 function init () {
   THREE.Object3D.DefaultUp = new THREE.Vector3(0, 0, 1)
@@ -44,9 +51,20 @@ function onWindowResize () {
   renderer.setSize(window.innerWidth, window.innerHeight)
   animate()
 }
-function meshToThreejs (mesh, material) {
+function meshToThreejs (mesh, diffuse) {
   let loader = new THREE.BufferGeometryLoader()
   var geometry = loader.parse(mesh.toThreejsJSON())
+  if (diffuse.r === 0 && diffuse.g === 0 && diffuse.b === 0) {
+    diffuse.r = 255
+    diffuse.g = 255
+    diffuse.b = 255
+  }
+  let diffusecolor = new THREE.Color(diffuse.r / 255.0, diffuse.g / 255.0, diffuse.b / 255.0)
+  let material = new THREE.MeshPhongMaterial(
+    {
+      color: diffusecolor,
+      side: THREE.DoubleSide
+    })
   return new THREE.Mesh(geometry, material)
 }
 function onActiveDocChanged () {
@@ -54,9 +72,6 @@ function onActiveDocChanged () {
   createScene()
   let rhino3dm = RhinoApp.getRhino3dm()
   let doc = RhinoApp.getActiveDoc()
-  let material = new THREE.MeshNormalMaterial()
-  material.side = THREE.DoubleSide
-  let wireMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff })
 
   let objects = doc.objects()
   for (let i = 0; i < objects.count; i++) {
@@ -65,8 +80,10 @@ function onActiveDocChanged () {
       continue
     }
     let geometry = modelObject.geometry()
+    let attr = modelObject.attributes()
+    let color = attr.drawColor(doc)
     if (geometry instanceof rhino3dm.Mesh) {
-      let threeMesh = meshToThreejs(geometry, material)
+      let threeMesh = meshToThreejs(geometry, color)
       _scene.add(threeMesh)
     }
     if (geometry instanceof rhino3dm.Brep) {
@@ -75,7 +92,7 @@ function onActiveDocChanged () {
         let face = faces.get(faceIndex)
         let mesh = face.getMesh(rhino3dm.MeshType.Any)
         if (mesh) {
-          let threeMesh = meshToThreejs(mesh, material)
+          let threeMesh = meshToThreejs(mesh, color)
           _scene.add(threeMesh)
           mesh.delete()
         }
@@ -102,17 +119,21 @@ function onActiveDocChanged () {
         verts[j * 3 + 2] = point[2]
       }
       points.setAttribute('position', new THREE.BufferAttribute(verts, 3))
+      let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
+      let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
       let polyline = new THREE.Line(points, wireMaterial)
       _scene.add(polyline)
     }
     if (geometry instanceof rhino3dm.Point) {
-      let pointMaterial = new THREE.PointsMaterial({ color: 0x888888 })
+      let pointMaterial = new THREE.PointsMaterial({ color: color })
       let pointGeometry = new THREE.Geometry()
       let pt = geometry.location
       pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
       _scene.add(new THREE.Points(pointGeometry, pointMaterial))
     }
+    modelObject.delete()
     geometry.delete()
+    attr.delete()
   }
   let bbox = objects.getBoundingBox()
   objects.delete()
@@ -132,7 +153,7 @@ function onActiveDocChanged () {
 
 export default {
   created () {
-    RhinoApp.setActiveDocChangedEventWatcher(onActiveDocChanged)
+    RhinoApp.addActiveDocChangedEventWatcher(onActiveDocChanged)
   },
   mounted: function () {
     init()
