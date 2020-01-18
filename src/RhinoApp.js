@@ -1,34 +1,40 @@
 let _rhino3dm = null
-let _activeDoc = null
+
 let _activeDocEventWatchers = []
 let _viewmodel = {
   docExists: false,
   filename: '',
   expanded: ['Layers'],
-  layers: [{
-    label: 'Layers',
-    header: 'root',
-    children: []
-  }]
+  layers: []
+}
+let _model = {
+  rhinoDoc: null,
+  threeScene: null,
+  threeObjectsOnLayer: {}
 }
 
-function addToDictionary (dictionary, chunks) {
+function addToDictionary (node, chunks, layer) {
   chunks.forEach((chunk) => {
-    if (!dictionary.hasOwnProperty(chunk)) {
-      dictionary[chunk] = {}
+    if (!node.layers.hasOwnProperty(chunk)) {
+      node.layers[chunk] = {
+        visible: true,
+        layers: {}
+      }
     }
-    dictionary = dictionary[chunk]
+    node = node.layers[chunk]
   })
+  node.visible = layer.visible
 }
 
 function createNodes (dictionary) {
   let nodes = []
-  let names = Object.getOwnPropertyNames(dictionary)
+  let names = Object.getOwnPropertyNames(dictionary.layers)
   names.forEach((name) => {
     let node = {
-      label: name
+      label: name,
+      visible: dictionary.layers[name].visible
     }
-    let childNodes = createNodes(dictionary[name])
+    let childNodes = createNodes(dictionary.layers[name])
     if (childNodes.length > 0) {
       node.children = childNodes
     }
@@ -56,28 +62,46 @@ let RhinoApp = {
   viewModel () {
     return _viewmodel
   },
+  updateVisibility () {
+    _viewmodel.layers.forEach((layer) => {
+      let objects = _model.threeObjectsOnLayer[layer.label]
+      if (objects != null) {
+        objects.forEach((obj) => {
+          obj.visible = layer.visible
+        })
+      }
+    })
+  },
   setActiveDoc (name, byteArray) {
     let doc = _rhino3dm.File3dm.fromByteArray(byteArray)
-    if (_activeDoc) {
-      _activeDoc.delete()
+    if (_model.rhinoDoc) {
+      _model.rhinoDoc.delete()
     }
-    _activeDoc = doc
+    if (_model.threeScene) {
+      _model.threeScene.dispose()
+      _model.threeScene = null
+    }
+    _model.threeObjectsOnLayer = {}
+    _model.rhinoDoc = doc
     _viewmodel.docExists = (doc != null)
     _viewmodel.filename = name
-    _viewmodel.layers[0].children.length = 0
+    _viewmodel.layers.length = 0
     if (doc) {
       let layers = doc.layers()
       let count = layers.count()
-      let topLayers = {}
+      let topLayers = {
+        layers: {},
+        visible: true
+      }
       for (let i = 0; i < count; i++) {
         let layer = layers.get(i)
         let fullpath = layer.fullPath
-        layer.delete()
         let chunks = fullpath.split('::')
-        addToDictionary(topLayers, chunks)
+        addToDictionary(topLayers, chunks, layer)
+        layer.delete()
       }
 
-      _viewmodel.layers[0].children = createNodes(topLayers)
+      _viewmodel.layers = createNodes(topLayers)
 
       layers.delete()
     }
@@ -85,10 +109,14 @@ let RhinoApp = {
     _activeDocEventWatchers.forEach((ew) => { ew() })
   },
   getActiveDoc () {
-    return _activeDoc
+    return _model
   },
   addActiveDocChangedEventWatcher (eventWatcher) {
     _activeDocEventWatchers.push(eventWatcher)
+  },
+  changeLayerVisibility (layerName, visible) {
+    console.log(layerName)
+    console.log(visible)
   }
 }
 

@@ -28,6 +28,7 @@
           to="viewer"
           @click="clickLayers()"
           icon="layers"
+          :disable="!viewmodel.docExists"
         />
 
         <q-toolbar-title>
@@ -51,18 +52,34 @@
       overlay
       content-class="bg-grey-2"
     >
-      <q-tree
-        :nodes="viewmodel.layers"
-        :expanded.sync="viewmodel.expanded"
-        node-key="label"
-      >
-        <template v-slot:default-header="prop">
-          <div class="row items-center">
-            <q-icon name="visibility" color="primary" class="q-mr-sm" />
-            <div>{{ prop.node.label }}</div>
-          </div>
-        </template>
-      </q-tree>
+      <q-list>
+        <q-expansion-item
+          v-for="layer in viewmodel.layers"
+          :key="layer.label"
+          clickable
+          :expand-icon="layer.children ? '' : '0'"
+          >
+          <template v-slot:header>
+            <q-item-section avatar>
+              <q-toggle
+              v-model="layer.visible"
+              @input="clickVis()"
+              />
+            </q-item-section>
+            <q-item-section>
+              {{layer.label}}
+            </q-item-section>
+          </template>
+
+          <q-card>
+            <q-card-section>
+              Lorem ipsum dolor sit amet, consectetur adipisicing elit. Quidem, eius reprehenderit eos corrupti
+              commodi magni quaerat ex numquam, dolorum officiis modi facere maiores architecto suscipit iste
+              eveniet doloribus ullam aliquid.
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
+      </q-list>
     </q-drawer>
 
     <q-drawer
@@ -71,28 +88,28 @@
       overlay
       content-class="bg-grey-2"
     >
-    <q-list bordered>
-      <q-item
-       clickable
-       v-ripple
-       @click="openSample()"
-       >
-        <q-item-section>Sample</q-item-section>
-        <q-item-section avatar>
-          <q-icon name="img:statics/logo.png"/>
-        </q-item-section>
-      </q-item>
-      <q-item
-       clickable
-       v-ripple
-       @click="open3dm()"
-       >
-        <q-item-section>Open...</q-item-section>
-        <q-item-section avatar>
-          <q-icon color="primary" name="folder" />
-        </q-item-section>
-      </q-item>
-    </q-list>
+      <q-list bordered>
+        <q-item
+        clickable
+        v-ripple
+        @click="openSample()"
+        >
+          <q-item-section>Sample</q-item-section>
+          <q-item-section avatar>
+            <q-icon name="img:statics/logo.png"/>
+          </q-item-section>
+        </q-item>
+        <q-item
+        clickable
+        v-ripple
+        @click="open3dm()"
+        >
+          <q-item-section>Open...</q-item-section>
+          <q-item-section avatar>
+            <q-icon color="primary" name="folder" />
+          </q-item-section>
+        </q-item>
+      </q-list>
     </q-drawer>
 
     <q-page-container>
@@ -144,6 +161,9 @@ export default {
   created () {
     RhinoApp.addActiveDocChangedEventWatcher(() => { this.fileDrawerVisible = false })
   },
+  mounted () {
+    console.log('layout mounted')
+  },
   data () {
     let vm = RhinoApp.viewModel()
     return {
@@ -153,6 +173,9 @@ export default {
     }
   },
   methods: {
+    clickVis () {
+      RhinoApp.updateVisibility()
+    },
     clickLayers () {
       this.fileDrawerVisible = false
       this.layerDrawerVisible = !this.layerDrawerVisible

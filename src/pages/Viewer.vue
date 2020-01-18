@@ -10,21 +10,21 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import RhinoApp from '../RhinoApp.js'
 
-let _scene = null
 var camera, renderer, controls
 function createScene () {
-  if (_scene) {
-    _scene.dispose()
+  let model = RhinoApp.getActiveDoc()
+  if (model.threeScene) {
+    model.threeScene.dispose()
   }
-  _scene = new THREE.Scene()
-  _scene.background = new THREE.Color(0.9, 0.9, 0.9)
+  model.threeScene = new THREE.Scene()
+  model.threeScene.background = new THREE.Color(0.9, 0.9, 0.9)
   //  add a couple lights
   let light = new THREE.DirectionalLight(0xffffff)
   light.position.set(0, 0, 1)
-  _scene.add(light)
+  model.threeScene.add(light)
   let light2 = new THREE.DirectionalLight(0x666666)
   light2.position.set(0.2, 0.2, -1)
-  _scene.add(light2)
+  model.threeScene.add(light2)
 }
 function init () {
   THREE.Object3D.DefaultUp = new THREE.Vector3(0, 0, 1)
@@ -43,7 +43,8 @@ function init () {
 var animate = function () {
   requestAnimationFrame(animate)
   controls.update()
-  renderer.render(_scene, camera)
+  let model = RhinoApp.getActiveDoc()
+  renderer.render(model.threeScene, camera)
 }
 function onWindowResize () {
   camera.aspect = window.innerWidth / window.innerHeight
@@ -71,7 +72,8 @@ function onActiveDocChanged () {
   console.log('activedoc changed')
   createScene()
   let rhino3dm = RhinoApp.getRhino3dm()
-  let doc = RhinoApp.getActiveDoc()
+  let model = RhinoApp.getActiveDoc()
+  let doc = model.rhinoDoc
 
   let objects = doc.objects()
   for (let i = 0; i < objects.count; i++) {
@@ -81,10 +83,16 @@ function onActiveDocChanged () {
     }
     let geometry = modelObject.geometry()
     let attr = modelObject.attributes()
+    let layer = doc.layers().get(attr.layerIndex)
+    let rootLayer = layer.fullPath.split('::')[0]
+    if (!model.threeObjectsOnLayer[rootLayer]) {
+      model.threeObjectsOnLayer[rootLayer] = []
+    }
     let color = attr.drawColor(doc)
+    let objectsToAdd = []
     if (geometry instanceof rhino3dm.Mesh) {
       let threeMesh = meshToThreejs(geometry, color)
-      _scene.add(threeMesh)
+      objectsToAdd.push(threeMesh)
     }
     if (geometry instanceof rhino3dm.Brep) {
       let faces = geometry.faces()
@@ -93,7 +101,7 @@ function onActiveDocChanged () {
         let mesh = face.getMesh(rhino3dm.MeshType.Any)
         if (mesh) {
           let threeMesh = meshToThreejs(mesh, color)
-          _scene.add(threeMesh)
+          objectsToAdd.push(threeMesh)
           mesh.delete()
         }
         face.delete()
@@ -122,15 +130,21 @@ function onActiveDocChanged () {
       let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
       let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
       let polyline = new THREE.Line(points, wireMaterial)
-      _scene.add(polyline)
+      objectsToAdd.push(polyline)
     }
     if (geometry instanceof rhino3dm.Point) {
       let pointMaterial = new THREE.PointsMaterial({ color: color })
       let pointGeometry = new THREE.Geometry()
       let pt = geometry.location
       pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
-      _scene.add(new THREE.Points(pointGeometry, pointMaterial))
+      objectsToAdd.push(new THREE.Points(pointGeometry, pointMaterial))
     }
+
+    objectsToAdd.forEach((obj) => {
+      model.threeScene.add(obj)
+      model.threeObjectsOnLayer[rootLayer].push(obj)
+    })
+
     modelObject.delete()
     geometry.delete()
     attr.delete()
@@ -149,6 +163,7 @@ function onActiveDocChanged () {
   camera.position.y = location[1]
   camera.position.z = location[2]
   viewport.delete()
+  RhinoApp.updateVisibility()
 }
 
 export default {
