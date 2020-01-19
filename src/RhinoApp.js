@@ -3,7 +3,7 @@ let _rhino3dm = null
 let _activeDocEventWatchers = []
 let _viewmodel = {
   docExists: false,
-  filename: '',
+  filename: 'rview WIP',
   expanded: ['Layers'],
   layers: []
 }
@@ -73,6 +73,7 @@ let RhinoApp = {
     })
   },
   setActiveDoc (name, byteArray) {
+    console.log('setActiveDoc (' + name + ')')
     let doc = _rhino3dm.File3dm.fromByteArray(byteArray)
     if (_model.rhinoDoc) {
       _model.rhinoDoc.delete()

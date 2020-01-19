@@ -1,8 +1,6 @@
 <template>
   <q-page class="flex flex-center">
-    <q-card
-      flat
-    >
+    <q-card flat>
       <q-img
         alt="rview"
         src="statics/logo.png"
@@ -14,8 +12,3 @@
     </q-card>
   </q-page>
 </template>
-
-<script>
-export default {
-}
-</script>

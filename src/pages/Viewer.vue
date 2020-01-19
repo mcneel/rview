@@ -1,6 +1,5 @@
 <template>
-  <!-- eslint-disable -->
-  <q-page class="fit row">
+  <q-page class="flex flex-center">
     <div id='cvs' class='col q-gutter-xs' ref="myCanvas"/>
   </q-page>
 </template>
@@ -69,7 +68,7 @@ function meshToThreejs (mesh, diffuse) {
   return new THREE.Mesh(geometry, material)
 }
 function onActiveDocChanged () {
-  console.log('activedoc changed')
+  console.log('Building Scene')
   createScene()
   let rhino3dm = RhinoApp.getRhino3dm()
   let model = RhinoApp.getActiveDoc()
