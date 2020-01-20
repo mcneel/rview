@@ -6,10 +6,7 @@
         <div class="text-h6">rview WIP</div>
       </q-card-section>
     </q-card>
-    <q-page-sticky
-      position="bottom-left"
-      :offset="[10, 10]"
-      v-if="viewmodel.docExists">
+    <q-page-sticky position="bottom-left" :offset="[10, 10]" v-if="viewmodel.docExists">
       <q-fab v-model="expandSticky" color="primary" icon="keyboard_arrow_up" direction="up">
         <q-fab-action
           :color="panMode ? 'secondary' : 'primary'"
@@ -63,6 +60,7 @@ let _pipeline = {
       return
     }
     vm.perspectiveCamera = true
+    this.zoomExtents(true)
   },
   setToParallelCamera: function () {
     let vm = RhinoApp.viewModel()
@@ -70,8 +68,20 @@ let _pipeline = {
       return
     }
     vm.perspectiveCamera = false
+    this.zoomExtents(true)
   },
-  zoomExtents: function () {
+  zoomExtents: function (createNewCamera) {
+    if (createNewCamera) {
+      if (RhinoApp.viewModel().perspectiveCamera) {
+        this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000)
+        this.camera.position.z = 40
+        this.controls.object = this.camera
+      } else {
+        this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000)
+        this.camera.position.z = 40
+        this.controls.object = this.camera
+      }
+    }
     let rhino3dm = RhinoApp.getRhino3dm()
     let bbox = RhinoApp.visibleObjectsBoundingBox()
     let viewport = new rhino3dm.ViewportInfo()
@@ -82,9 +92,13 @@ let _pipeline = {
     viewport.dollyExtents(bbox, 0)
     bbox.delete()
     let location = viewport.cameraLocation
-    _pipeline.camera.position.x = location[0]
-    _pipeline.camera.position.y = location[1]
-    _pipeline.camera.position.z = location[2]
+    this.camera.position.x = location[0]
+    this.camera.position.y = location[1]
+    this.camera.position.z = location[2]
+    this.camera.updateProjectionMatrix()
+    this.controls.target.x = 0
+    this.controls.target.y = 0
+    this.controls.target.z = 0
     viewport.delete()
   }
 }
@@ -216,7 +230,7 @@ function onActiveDocChanged () {
   }
   objects.delete()
   RhinoApp.updateVisibility()
-  _pipeline.zoomExtents()
+  _pipeline.zoomExtents(true)
   animate()
 }
 
@@ -242,15 +256,17 @@ export default {
       }
     },
     zoomExtents () {
-      _pipeline.zoomExtents()
+      _pipeline.zoomExtents(true)
     },
     togglePan () {
       this.panMode = !this.panMode
       this.expandSticky = this.panMode
       if (this.panMode) {
         _pipeline.controls.mouseButtons.LEFT = THREE.MOUSE.PAN
+        _pipeline.controls.touches.ONE = THREE.TOUCH.PAN
       } else {
         _pipeline.controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE
+        _pipeline.controls.touches.ONE = THREE.TOUCH.ROTATE
       }
     }
   }
