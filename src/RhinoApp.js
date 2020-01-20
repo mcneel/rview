@@ -5,7 +5,9 @@ let _viewmodel = {
   docExists: false,
   filename: 'rview WIP',
   expanded: ['Layers'],
-  layers: []
+  layers: [],
+  perspectiveCamera: true,
+  onChangeCamera: function () {}
 }
 let _model = {
   rhinoDoc: null,
@@ -115,9 +117,32 @@ let RhinoApp = {
   addActiveDocChangedEventWatcher (eventWatcher) {
     _activeDocEventWatchers.push(eventWatcher)
   },
-  changeLayerVisibility (layerName, visible) {
-    console.log(layerName)
-    console.log(visible)
+  visibleObjectsBoundingBox () {
+    let bbox = new _rhino3dm.BoundingBox(1, 1, 1, -1, -1, -1)
+    let doc = RhinoApp.getActiveDoc().rhinoDoc
+    let objects = doc.objects()
+    for (let i = 0; i < objects.count; i++) {
+      let modelObject = objects.get(i)
+      if (modelObject == null) {
+        continue
+      }
+      let geometry = modelObject.geometry()
+      let attr = modelObject.attributes()
+      let layer = doc.layers().get(attr.layerIndex)
+      let rootLayer = layer.fullPath.split('::')[0]
+      if (!_viewmodel.layers[rootLayer] || !_viewmodel.layers[rootLayer].visible) {
+        continue
+      }
+      let geometryBbox = geometry.getBoundingBox()
+      bbox = bbox.union(geometryBbox, bbox)
+      geometryBbox.delete()
+      layer.delete()
+      attr.delete()
+      geometry.delete()
+      modelObject.delete()
+    }
+    objects.delete()
+    return bbox
   }
 }
 

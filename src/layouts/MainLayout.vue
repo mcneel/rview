@@ -12,7 +12,6 @@
         <q-btn @click="clickLayers()"
           dense
           :flat="!layerDrawerVisible"
-          to="viewer"
           :color="!layerDrawerVisible ? '' : 'secondary'"
           icon="layers"
           :disable="!viewmodel.docExists"
@@ -21,7 +20,6 @@
         <q-btn @click="clickView()"
           dense
           :flat="!viewDrawerVisible"
-          to="viewer"
           :color="!viewDrawerVisible ? '' : 'secondary'"
           icon="aspect_ratio"
           :disable="!viewmodel.docExists"
@@ -80,9 +78,11 @@
       <q-list bordered>
         <q-item>
           <q-item-section avatar>
-            <q-toggle @input="clickVis()"/>
+            <q-toggle v-model="viewmodel.perspectiveCamera"
+            @input="clickPerspectiveCamer()"
+            :label="viewmodel.perspectiveCamera?'Perspective':'Top'"
+            />
           </q-item-section>
-          <q-item-section>3D</q-item-section>
         </q-item>
       </q-list>
     </q-drawer>
@@ -95,29 +95,6 @@
 
 <script>
 import RhinoApp from '../RhinoApp'
-
-function openFile (router) {
-  let fileInput = document.createElement('input')
-  let readFile = function (e) {
-    let file = e.target.files[0]
-    if (!file) { return }
-    let reader = new FileReader()
-    reader.onload = function (e) {
-      var contents = e.target.result
-      RhinoApp.setActiveDoc(file.name, contents)
-      router.push('viewer').catch(err => {}) // eslint-disable-line
-      document.body.removeChild(fileInput)
-    }
-    reader.readAsArrayBuffer(file)
-  }
-  fileInput.type = 'file'
-  fileInput.style.display = 'none'
-  fileInput.onchange = readFile
-  document.body.appendChild(fileInput)
-  let eventMouse = document.createEvent('MouseEvents')
-  eventMouse.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null)
-  fileInput.dispatchEvent(eventMouse)
-}
 
 export default {
   created () {
@@ -133,6 +110,9 @@ export default {
     }
   },
   methods: {
+    clickPerspectiveCamer () {
+      this.viewmodel.onChangeCamera()
+    },
     clickVis () {
       RhinoApp.updateVisibility()
     },
@@ -157,12 +137,29 @@ export default {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
           RhinoApp.setActiveDoc('RhinoLogo.3dm', new Uint8Array(buffer))
-          this.$router.push('viewer').catch(err => {}) // eslint-disable-line
         })
       })
     },
     open3dm () {
-      openFile(this.$router)
+      let fileInput = document.createElement('input')
+      let readFile = function (e) {
+        let file = e.target.files[0]
+        if (!file) { return }
+        let reader = new FileReader()
+        reader.onload = function (e) {
+          var contents = e.target.result
+          RhinoApp.setActiveDoc(file.name, contents)
+          document.body.removeChild(fileInput)
+        }
+        reader.readAsArrayBuffer(file)
+      }
+      fileInput.type = 'file'
+      fileInput.style.display = 'none'
+      fileInput.onchange = readFile
+      document.body.appendChild(fileInput)
+      let eventMouse = document.createEvent('MouseEvents')
+      eventMouse.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null)
+      fileInput.dispatchEvent(eventMouse)
     }
   }
 }
