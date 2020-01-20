@@ -23,6 +23,9 @@
         </q-fab-action>
       </q-fab>
     </q-page-sticky>
+    <q-page-sticky position="bottom-right" :offset="[10, 10]" v-if="panMode">
+      <q-btn outline rounded color="primary" label="Pan Mode" icon-right="close" @click="togglePan()"/>
+    </q-page-sticky>
   </q-page>
 </template>
 
@@ -54,34 +57,17 @@ let _pipeline = {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     // this.controls.mouseButtons.LEFT = THREE.MOUSE.PAN
   },
-  setToPerspectiveCamera: function () {
+  toPerspectiveCamera: function () {
     let vm = RhinoApp.viewModel()
-    if (vm.perspectiveCamera) {
-      return
-    }
     vm.perspectiveCamera = true
     this.zoomExtents(true)
   },
-  setToParallelCamera: function () {
+  toParallelCamera: function () {
     let vm = RhinoApp.viewModel()
-    if (!vm.perspectiveCamera) {
-      return
-    }
     vm.perspectiveCamera = false
     this.zoomExtents(true)
   },
   zoomExtents: function (createNewCamera) {
-    if (createNewCamera) {
-      if (RhinoApp.viewModel().perspectiveCamera) {
-        this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000)
-        this.camera.position.z = 40
-        this.controls.object = this.camera
-      } else {
-        this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000)
-        this.camera.position.z = 40
-        this.controls.object = this.camera
-      }
-    }
     let rhino3dm = RhinoApp.getRhino3dm()
     let bbox = RhinoApp.visibleObjectsBoundingBox()
     let viewport = new rhino3dm.ViewportInfo()
@@ -89,8 +75,26 @@ let _pipeline = {
     let size = new THREE.Vector2(0, 0)
     _pipeline.renderer.getSize(size)
     viewport.screenPort = [0, 0, size.x, size.y]
-    viewport.dollyExtents(bbox, 0)
+    let border = 0.0
+    if (!RhinoApp.viewModel().perspectiveCamera) {
+      border = (bbox.max.x - bbox.min.x) * 0.1
+    }
+    viewport.dollyExtents(bbox, border)
     bbox.delete()
+
+    if (createNewCamera) {
+      if (RhinoApp.viewModel().perspectiveCamera) {
+        this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000)
+        this.camera.position.z = 40
+        this.controls.object = this.camera
+      } else {
+        let frustum = viewport.getFrustum()
+        this.camera = new THREE.OrthographicCamera(frustum.left, frustum.right, frustum.top, frustum.bottom, frustum.near, frustum.far)
+        this.camera.position.z = 40
+        this.controls.object = this.camera
+      }
+    }
+
     let location = viewport.cameraLocation
     this.camera.position.x = location[0]
     this.camera.position.y = location[1]
@@ -245,23 +249,26 @@ export default {
   },
   created () {
     RhinoApp.addActiveDocChangedEventWatcher(onActiveDocChanged)
-    this.onChangeCamera = this.updateCameraProjection
+    this.viewmodel.onChangeCamera = this.updateCameraProjection
   },
   methods: {
     updateCameraProjection () {
-      if (this.perspectiveCamera) {
-        _pipeline.SetToPerspectiveCamera()
+      if (this.viewmodel.perspectiveCamera) {
+        _pipeline.toPerspectiveCamera()
       } else {
-        _pipeline.SetToParallelCamera()
+        _pipeline.toParallelCamera()
       }
+      this.setLeftButtonMode()
     },
     zoomExtents () {
       _pipeline.zoomExtents(true)
     },
     togglePan () {
       this.panMode = !this.panMode
-      this.expandSticky = this.panMode
-      if (this.panMode) {
+      this.setLeftButtonMode()
+    },
+    setLeftButtonMode () {
+      if (this.panMode || !this.viewmodel.perspectiveCamera) {
         _pipeline.controls.mouseButtons.LEFT = THREE.MOUSE.PAN
         _pipeline.controls.touches.ONE = THREE.TOUCH.PAN
       } else {

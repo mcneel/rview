@@ -79,7 +79,7 @@
         <q-item>
           <q-item-section avatar>
             <q-toggle v-model="viewmodel.perspectiveCamera"
-            @input="clickPerspectiveCamer()"
+            @input="clickPerspectiveCamera()"
             :label="viewmodel.perspectiveCamera?'Perspective':'Top'"
             />
           </q-item-section>
@@ -110,7 +110,7 @@ export default {
     }
   },
   methods: {
-    clickPerspectiveCamer () {
+    clickPerspectiveCamera () {
       this.viewmodel.onChangeCamera()
     },
     clickVis () {
