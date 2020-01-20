@@ -1,16 +1,22 @@
 <template>
   <q-page id='cvs' class="flex flex-center">
-    <q-card flat v-if="!docExists">
+    <q-card flat v-if="!viewmodel.docExists">
       <q-img alt="rview" src="statics/logo.png"/>
       <q-card-section>
         <div class="text-h6">rview WIP</div>
       </q-card-section>
     </q-card>
-    <q-page-sticky position="bottom-left" :offset="[18, 18]" v-if="docExists">
-      <q-fab color="primary" icon="keyboard_arrow_up" direction="up">
-        <q-fab-action color="primary" icon="pan_tool" :disable="true">
+    <q-page-sticky
+      position="bottom-left"
+      :offset="[10, 10]"
+      v-if="viewmodel.docExists">
+      <q-fab v-model="expandSticky" color="primary" icon="keyboard_arrow_up" direction="up">
+        <q-fab-action
+          :color="panMode ? 'secondary' : 'primary'"
+          icon="pan_tool"
+          @click="togglePan()">
           <q-tooltip transition-show="flip-right" transition-hide="flip-left">
-            (TODO) implement pan
+            Pan
           </q-tooltip>
         </q-fab-action>
         <q-fab-action color="primary" icon="zoom_out_map" @click="zoomExtents()">
@@ -216,7 +222,12 @@ function onActiveDocChanged () {
 
 export default {
   data () {
-    return RhinoApp.viewModel()
+    let vm = RhinoApp.viewModel()
+    return {
+      expandSticky: false,
+      panMode: false,
+      viewmodel: vm
+    }
   },
   created () {
     RhinoApp.addActiveDocChangedEventWatcher(onActiveDocChanged)
@@ -232,6 +243,15 @@ export default {
     },
     zoomExtents () {
       _pipeline.zoomExtents()
+    },
+    togglePan () {
+      this.panMode = !this.panMode
+      this.expandSticky = this.panMode
+      if (this.panMode) {
+        _pipeline.controls.mouseButtons.LEFT = THREE.MOUSE.PAN
+      } else {
+        _pipeline.controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE
+      }
     }
   }
 }
