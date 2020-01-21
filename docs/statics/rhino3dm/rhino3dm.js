@@ -652,8 +652,8 @@ var wasmMemory;
 // In the wasm backend, we polyfill the WebAssembly object,
 // so this creates a (non-native-wasm) table for us.
 var wasmTable = new WebAssembly.Table({
-  'initial': 5710,
-  'maximum': 5710 + 0,
+  'initial': 5714,
+  'maximum': 5714 + 0,
   'element': 'anyfunc'
 });
 
@@ -1257,11 +1257,11 @@ function updateGlobalBufferAndViews(buf) {
 }
 
 var STATIC_BASE = 1024,
-    STACK_BASE = 5560112,
+    STACK_BASE = 5560160,
     STACKTOP = STACK_BASE,
-    STACK_MAX = 317232,
-    DYNAMIC_BASE = 5560112,
-    DYNAMICTOP_PTR = 317072;
+    STACK_MAX = 317280,
+    DYNAMIC_BASE = 5560160,
+    DYNAMICTOP_PTR = 317120;
 
 assert(STACK_BASE % 16 === 0, 'stack must start aligned');
 assert(DYNAMIC_BASE % 16 === 0, 'heap must start aligned');
@@ -1776,7 +1776,7 @@ var ASM_CONSTS = {
 
 
 
-// STATICTOP = STATIC_BASE + 316208;
+// STATICTOP = STATIC_BASE + 316256;
 /* global initializers */  __ATINIT__.push({ func: function() { ___wasm_call_ctors() } });
 
 
@@ -6727,7 +6727,7 @@ var ASM_CONSTS = {
     }
 
   function _emscripten_get_sbrk_ptr() {
-      return 317072;
+      return 317120;
     }
 
   function _emscripten_memcpy_big(dest, src, num) {
@@ -6920,10 +6920,10 @@ var ASM_CONSTS = {
   }
 
   
-  var ___tm_current=317088;
+  var ___tm_current=317136;
   
   
-  var ___tm_timezone=(stringToUTF8("GMT", 317136, 4), 317136);function _gmtime_r(time, tmPtr) {
+  var ___tm_timezone=(stringToUTF8("GMT", 317184, 4), 317184);function _gmtime_r(time, tmPtr) {
       var date = new Date(HEAP32[((time)>>2)]*1000);
       HEAP32[((tmPtr)>>2)]=date.getUTCSeconds();
       HEAP32[(((tmPtr)+(4))>>2)]=date.getUTCMinutes();

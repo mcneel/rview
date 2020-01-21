@@ -52,10 +52,9 @@ let _pipeline = {
     window.addEventListener('resize', () => animate(true), false)
 
     this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000)
-    // this.camera = new THREE.OrthographicCamera(-20, 20, -20, 20)
     this.camera.position.z = 40
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
-    // this.controls.mouseButtons.LEFT = THREE.MOUSE.PAN
+    this.controls.screenSpacePanning = true
   },
   toPerspectiveCamera: function () {
     let vm = RhinoApp.viewModel()
@@ -69,30 +68,48 @@ let _pipeline = {
   },
   zoomExtents: function (createNewCamera) {
     let rhino3dm = RhinoApp.getRhino3dm()
-    let bbox = RhinoApp.visibleObjectsBoundingBox()
+    let b = RhinoApp.visibleObjectsBoundingBox2()
+    let bbox = new rhino3dm.BoundingBox(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z)
     let viewport = new rhino3dm.ViewportInfo()
     viewport.isPerspectiveProjection = RhinoApp.viewModel().perspectiveCamera
     let size = new THREE.Vector2(0, 0)
     _pipeline.renderer.getSize(size)
     viewport.screenPort = [0, 0, size.x, size.y]
     let border = 0.0
-    if (!RhinoApp.viewModel().perspectiveCamera) {
-      border = (bbox.max.x - bbox.min.x) * 0.1
+    if (RhinoApp.viewModel().perspectiveCamera) {
+      viewport.setCameraLocation([40, -40, 40])
+    } else {
+      border = (bbox.max[0] - bbox.min[0]) * 0.05
     }
+    let width = bbox.max[0] - bbox.min[0]
+    let height = width * size.y / size.x
+    viewport.setFrustum(-width / 2.0, width / 2.0, -height / 2.0, height / 2.0, 0.1, 1000)
     viewport.dollyExtents(bbox, border)
     bbox.delete()
 
     if (createNewCamera) {
+      RhinoApp.getActiveDoc().threeScene.remove(this.camera)
+      let fr = viewport.getFrustum()
+      if (fr.near > 0.1) {
+        fr.near = 0.1
+      }
+      if (fr.far < 1000) {
+        fr.far = 1000
+      }
+      viewport.setFrustum(fr.left, fr.right, fr.bottom, fr.top, fr.near, fr.far)
       if (RhinoApp.viewModel().perspectiveCamera) {
         this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000)
-        this.camera.position.z = 40
-        this.controls.object = this.camera
       } else {
-        let frustum = viewport.getFrustum()
-        this.camera = new THREE.OrthographicCamera(frustum.left, frustum.right, frustum.top, frustum.bottom, frustum.near, frustum.far)
-        this.camera.position.z = 40
-        this.controls.object = this.camera
+        fr = viewport.getFrustum()
+        this.camera = new THREE.OrthographicCamera(fr.left, fr.right, fr.top, fr.bottom, fr.near, fr.far)
+        this.camera.up.set(viewport.cameraUp[0], viewport.cameraUp[1], viewport.cameraUp[2])
       }
+      this.controls.object = this.camera
+
+      let light = new THREE.DirectionalLight(0xd9d9d9)
+      light.position.set(0, 0, 1)
+      this.camera.add(light)
+      RhinoApp.getActiveDoc().threeScene.add(this.camera)
     }
 
     let location = viewport.cameraLocation
@@ -100,9 +117,7 @@ let _pipeline = {
     this.camera.position.y = location[1]
     this.camera.position.z = location[2]
     this.camera.updateProjectionMatrix()
-    this.controls.target.x = 0
-    this.controls.target.y = 0
-    this.controls.target.z = 0
+    this.controls.target.set(0, 0, 0)
     viewport.delete()
   }
 }
@@ -127,13 +142,6 @@ function createScene () {
   }
   model.threeScene = new THREE.Scene()
   model.threeScene.background = new THREE.Color(0.9, 0.9, 0.9)
-  //  add a couple lights
-  let light = new THREE.DirectionalLight(0xffffff)
-  light.position.set(0, 0, 1)
-  model.threeScene.add(light)
-  let light2 = new THREE.DirectionalLight(0x666666)
-  light2.position.set(0.2, 0.2, -1)
-  model.threeScene.add(light2)
 }
 
 function meshToThreejs (mesh, diffuse) {
@@ -175,7 +183,7 @@ function onActiveDocChanged () {
     let objectsToAdd = []
     if (geometry instanceof rhino3dm.Mesh) {
       let threeMesh = meshToThreejs(geometry, color)
-      objectsToAdd.push(threeMesh)
+      objectsToAdd.push([threeMesh, geometry.getBoundingBox()])
     }
     if (geometry instanceof rhino3dm.Brep) {
       let faces = geometry.faces()
@@ -184,7 +192,7 @@ function onActiveDocChanged () {
         let mesh = face.getMesh(rhino3dm.MeshType.Any)
         if (mesh) {
           let threeMesh = meshToThreejs(mesh, color)
-          objectsToAdd.push(threeMesh)
+          objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
           mesh.delete()
         }
         face.delete()
@@ -213,19 +221,28 @@ function onActiveDocChanged () {
       let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
       let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
       let polyline = new THREE.Line(points, wireMaterial)
-      objectsToAdd.push(polyline)
+      objectsToAdd.push([polyline, geometry.getBoundingBox()])
     }
     if (geometry instanceof rhino3dm.Point) {
       let pointMaterial = new THREE.PointsMaterial({ color: color })
       let pointGeometry = new THREE.Geometry()
       let pt = geometry.location
       pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
-      objectsToAdd.push(new THREE.Points(pointGeometry, pointMaterial))
+      objectsToAdd.push([new THREE.Points(pointGeometry, pointMaterial), geometry.getBoundingBox()])
     }
 
     objectsToAdd.forEach((obj) => {
-      model.threeScene.add(obj)
-      model.threeObjectsOnLayer[rootLayer].push(obj)
+      let threeGeometry = obj[0]
+      let bbox = obj[1]
+      let minPoint = new THREE.Vector3(bbox.min[0], bbox.min[1], bbox.min[2])
+      let maxPoint = new THREE.Vector3(bbox.max[0], bbox.max[1], bbox.max[2])
+      threeGeometry.boundingBox = new THREE.Box3(minPoint, maxPoint)
+      bbox.delete()
+      model.threeScene.add(threeGeometry)
+      model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
+      // let box = new THREE.BoxHelper(threeGeometry, 0x000000)
+      // model.threeScene.add(box)
+      // model.threeObjectsOnLayer[rootLayer].push(box)
     })
 
     modelObject.delete()

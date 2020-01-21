@@ -118,6 +118,12 @@ let RhinoApp = {
     _activeDocEventWatchers.push(eventWatcher)
   },
   visibleObjectsBoundingBox () {
+    let visibleLayers = {}
+    _viewmodel.layers.forEach((layer) => {
+      if (layer.visible) {
+        visibleLayers[layer.label] = true
+      }
+    })
     let bbox = new _rhino3dm.BoundingBox(1, 1, 1, -1, -1, -1)
     let doc = RhinoApp.getActiveDoc().rhinoDoc
     let objects = doc.objects()
@@ -130,11 +136,11 @@ let RhinoApp = {
       let attr = modelObject.attributes()
       let layer = doc.layers().get(attr.layerIndex)
       let rootLayer = layer.fullPath.split('::')[0]
-      if (!_viewmodel.layers[rootLayer] || !_viewmodel.layers[rootLayer].visible) {
+      if (!visibleLayers[rootLayer]) {
         continue
       }
       let geometryBbox = geometry.getBoundingBox()
-      bbox = bbox.union(geometryBbox, bbox)
+      bbox = _rhino3dm.BoundingBox.union(geometryBbox, bbox)
       geometryBbox.delete()
       layer.delete()
       attr.delete()
@@ -142,6 +148,26 @@ let RhinoApp = {
       modelObject.delete()
     }
     objects.delete()
+    return bbox
+  },
+  visibleObjectsBoundingBox2 () {
+    let bbox = null
+    _viewmodel.layers.forEach((layer) => {
+      if (!layer.visible) {
+        return
+      }
+      let objects = _model.threeObjectsOnLayer[layer.label]
+      if (objects == null) {
+        return
+      }
+      objects.forEach((threeObject) => {
+        if (bbox == null) {
+          bbox = threeObject.boundingBox.clone()
+        } else {
+          bbox.union(threeObject.boundingBox)
+        }
+      })
+    })
     return bbox
   }
 }
