@@ -214,24 +214,7 @@ function onActiveDocChanged () {
       faces.delete()
     }
     if (geometry instanceof rhino3dm.Curve) {
-      let pointCount = 21
-      if (geometry instanceof rhino3dm.LineCurve) {
-        pointCount = 2
-      } else if (geometry instanceof rhino3dm.PolylineCurve) {
-        pointCount = geometry.pointCount
-      }
-      let points = new THREE.BufferGeometry()
-      let verts = new Float32Array(pointCount * 3)
-      let domain = geometry.domain
-      let divisions = pointCount - 1.0
-      for (let j = 0; j < pointCount; j++) {
-        let t = domain[0] + (j / divisions) * (domain[1] - domain[0])
-        let point = geometry.pointAt(t)
-        verts[j * 3] = point[0]
-        verts[j * 3 + 1] = point[1]
-        verts[j * 3 + 2] = point[2]
-      }
-      points.setAttribute('position', new THREE.BufferAttribute(verts, 3))
+      let points = SceneUtilities.curveToBufferGeometry(geometry, 21)
       let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
       let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
       let polyline = new THREE.Line(points, wireMaterial)

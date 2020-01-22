@@ -1,16 +1,52 @@
 import * as THREE from 'three'
 
-let _rhino3dm = null // eslint-disable-line
+let _rhino3dm = null
+
+function curveToPoints (curve, pointLimit) {
+  let pointCount = pointLimit
+  let rc = []
+
+  if (curve instanceof _rhino3dm.LineCurve) {
+    return [curve.pointAtStart, curve.pointAtEnd]
+  }
+
+  if (curve instanceof _rhino3dm.PolylineCurve) {
+    pointCount = curve.pointCount
+    for (let i = 0; i < pointCount; i++) {
+      rc.push(curve.point(i))
+    }
+    return rc
+  }
+
+  if (curve instanceof _rhino3dm.PolyCurve) {
+    let segmentCount = curve.segmentCount
+    for (let i = 0; i < segmentCount; i++) {
+      let segment = curve.segmentCurve(i)
+      let segmentArray = curveToPoints(segment)
+      rc = rc.concat(segmentArray)
+      segment.delete()
+    }
+    return rc
+  }
+
+  if (curve instanceof _rhino3dm.NurbsCurve && curve.degree === 1) {
+    console.log('degree 1 curve')
+  }
+
+  let domain = curve.domain
+  let divisions = pointCount - 1.0
+  for (let j = 0; j < pointCount; j++) {
+    let t = domain[0] + (j / divisions) * (domain[1] - domain[0])
+    rc.push(curve.pointAt(t))
+  }
+  return rc
+}
 
 let SceneUtilities = {
   init (rhino3dm) {
     _rhino3dm = rhino3dm
   },
-  createGrid () {
-    const gridSpacing = 1.0
-    const gridLineCount = 70
-    const gridThickFrequency = 5
-
+  createGrid (gridSpacing = 1.0, gridLineCount = 70, gridThickFrequency = 5) {
     const xMin = -gridLineCount * gridSpacing
     const yMin = xMin
     const xMax = gridLineCount * gridSpacing
@@ -93,6 +129,18 @@ let SceneUtilities = {
     })
     grid.add(new THREE.LineSegments(geometry, yMaterial))
     return grid
+  },
+  curveToBufferGeometry (curve, pointLimit = 21) {
+    let pointArray = curveToPoints(curve, pointLimit)
+    let points = new THREE.BufferGeometry()
+    let verts = new Float32Array(pointArray.length * 3)
+    for (let i = 0; i < pointArray.length; i++) {
+      verts[i * 3] = pointArray[i][0]
+      verts[i * 3 + 1] = pointArray[i][1]
+      verts[i * 3 + 2] = pointArray[i][2]
+    }
+    points.setAttribute('position', new THREE.BufferAttribute(verts, 3))
+    return points
   }
 }
 
