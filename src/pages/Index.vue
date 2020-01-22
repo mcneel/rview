@@ -261,11 +261,39 @@ export default {
       viewmodel: vm
     }
   },
+  props: {
+    url: {
+      type: String,
+      default: ''
+    }
+  },
   created () {
     RhinoApp.addActiveDocChangedEventWatcher(onActiveDocChanged)
     this.viewmodel.onChangeCamera = this.updateCameraProjection
   },
+  mounted () {
+    if (this.$route.query && this.$route.query['url']) {
+      console.log('MOUNTED with ' + this.$route.query['url'])
+      this.openURL(this.$route.query['url'])
+    }
+    console.log('MOUNTED')
+  },
+  watch: {
+    $route (to, from) {
+      if (to.query['url']) {
+        this.openURL(to.query['url'])
+      }
+      console.log(to.query)
+    }
+  },
   methods: {
+    openURL (url) {
+      fetch(url).then(async res => {
+        let buffer = await res.arrayBuffer()
+        let arr = new Uint8Array(buffer)
+        RhinoApp.setActiveDoc(url, arr)
+      })
+    },
     updateCameraProjection () {
       if (this.viewmodel.perspectiveCamera) {
         _pipeline.toPerspectiveCamera()

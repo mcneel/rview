@@ -1,7 +1,7 @@
 import SceneUtilities from './SceneUtilities.js'
 
 let _rhino3dm = null
-
+let _cachedDoc = null
 let _activeDocEventWatchers = []
 let _viewmodel = {
   docExists: false,
@@ -60,6 +60,12 @@ let RhinoApp = {
         SceneUtilities.init(_rhino3dm)
         endwait()
         console.log('rhino3dm loaded')
+        if (_cachedDoc != null) {
+          let name = _cachedDoc[0]
+          let byteArray = _cachedDoc[1]
+          _cachedDoc = null
+          this.setActiveDoc(name, byteArray)
+        }
       })
     }
   },
@@ -84,6 +90,10 @@ let RhinoApp = {
   },
   setActiveDoc (name, byteArray) {
     console.log('setActiveDoc (' + name + ')')
+    if (_rhino3dm == null) {
+      _cachedDoc = [name, byteArray]
+      return
+    }
     let doc = _rhino3dm.File3dm.fromByteArray(byteArray)
     if (_model.rhinoDoc) {
       _model.rhinoDoc.delete()
