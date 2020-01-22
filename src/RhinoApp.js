@@ -1,4 +1,5 @@
 import SceneUtilities from './SceneUtilities.js'
+import * as THREE from 'three'
 
 let _rhino3dm = null
 let _cachedDoc = null
@@ -10,13 +11,15 @@ let _viewmodel = {
   layers: [],
   perspectiveCamera: true,
   onChangeCamera: function () {},
-  gridVisible: true
+  gridVisible: true,
+  lightColor: 'rgb(240,240,240)'
 }
 let _model = {
   rhinoDoc: null,
   threeScene: null,
   threeObjectsOnLayer: {},
-  threeGrid: null
+  threeGrid: null,
+  cameraLight: null
 }
 
 function addToDictionary (node, chunks, layer) {
@@ -87,6 +90,9 @@ let RhinoApp = {
     if (_model.threeGrid) {
       _model.threeGrid.visible = _viewmodel.gridVisible
     }
+  },
+  updateColors () {
+    _model.cameraLight.color = new THREE.Color(_viewmodel.lightColor)
   },
   setActiveDoc (name, byteArray) {
     console.log('setActiveDoc (' + name + ')')

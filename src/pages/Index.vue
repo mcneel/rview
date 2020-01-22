@@ -117,8 +117,9 @@ let _pipeline = {
       }
       this.controls.object = this.camera
 
-      let light = new THREE.DirectionalLight(0xeeeeee)
+      let light = new THREE.DirectionalLight(RhinoApp.viewModel().lightColor)
       light.position.set(0, 0, 1)
+      RhinoApp.getActiveDoc().cameraLight = light
       this.camera.add(light)
       RhinoApp.getActiveDoc().threeScene.add(this.camera)
     }
