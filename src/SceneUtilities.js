@@ -1,16 +1,16 @@
 import * as THREE from 'three'
-
-let _rhino3dm = null
+import RhinoApp from './RhinoApp.js'
 
 function curveToPoints (curve, pointLimit) {
+  let rhino3dm = RhinoApp.getRhino3dm()
   let pointCount = pointLimit
   let rc = []
 
-  if (curve instanceof _rhino3dm.LineCurve) {
+  if (curve instanceof rhino3dm.LineCurve) {
     return [curve.pointAtStart, curve.pointAtEnd]
   }
 
-  if (curve instanceof _rhino3dm.PolylineCurve) {
+  if (curve instanceof rhino3dm.PolylineCurve) {
     pointCount = curve.pointCount
     for (let i = 0; i < pointCount; i++) {
       rc.push(curve.point(i))
@@ -18,7 +18,7 @@ function curveToPoints (curve, pointLimit) {
     return rc
   }
 
-  if (curve instanceof _rhino3dm.PolyCurve) {
+  if (curve instanceof rhino3dm.PolyCurve) {
     let segmentCount = curve.segmentCount
     for (let i = 0; i < segmentCount; i++) {
       let segment = curve.segmentCurve(i)
@@ -29,8 +29,8 @@ function curveToPoints (curve, pointLimit) {
     return rc
   }
 
-  if (curve instanceof _rhino3dm.NurbsCurve && curve.degree === 1) {
-    console.log('degree 1 curve')
+  if (curve instanceof rhino3dm.NurbsCurve && curve.degree === 1) {
+    console.info('degree 1 curve')
   }
 
   let domain = curve.domain
@@ -43,9 +43,6 @@ function curveToPoints (curve, pointLimit) {
 }
 
 let SceneUtilities = {
-  init (rhino3dm) {
-    _rhino3dm = rhino3dm
-  },
   createGrid (gridSpacing = 1.0, gridLineCount = 70, gridThickFrequency = 5) {
     const xMin = -gridLineCount * gridSpacing
     const yMin = xMin
@@ -130,7 +127,7 @@ let SceneUtilities = {
     grid.add(new THREE.LineSegments(geometry, yMaterial))
     return grid
   },
-  curveToBufferGeometry (curve, pointLimit = 21) {
+  curveToBufferGeometry (curve, pointLimit) {
     let pointArray = curveToPoints(curve, pointLimit)
     let points = new THREE.BufferGeometry()
     let verts = new Float32Array(pointArray.length * 3)
@@ -156,6 +153,102 @@ let SceneUtilities = {
       side: THREE.DoubleSide
     })
     return new THREE.Mesh(geometry, material)
+  },
+  createThreeGeometry (geometry, color) {
+    let rhino3dm = RhinoApp.getRhino3dm()
+    let objectsToAdd = []
+    const objectType = geometry.objectType
+    switch (objectType) {
+      case rhino3dm.ObjectType.Point:
+        {
+          let pointMaterial = new THREE.PointsMaterial({ color: color })
+          let pointGeometry = new THREE.Geometry()
+          let pt = geometry.location
+          pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
+          objectsToAdd.push([new THREE.Points(pointGeometry, pointMaterial), geometry.getBoundingBox()])
+        }
+        break
+      case rhino3dm.ObjectType.PointSet:
+        {
+          let pointMaterial = new THREE.PointsMaterial({ color: color })
+          let pointGeometry = new THREE.Geometry()
+          let count = geometry.count
+          for (let i = 0; i < count; i++) {
+            let pt = geometry.pointAt(i)
+            pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
+          }
+          objectsToAdd.push([new THREE.Points(pointGeometry, pointMaterial), geometry.getBoundingBox()])
+        }
+        break
+      case rhino3dm.ObjectType.Curve:
+        {
+          let points = this.curveToBufferGeometry(geometry, 32)
+          let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
+          let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
+          let polyline = new THREE.Line(points, wireMaterial)
+          objectsToAdd.push([polyline, geometry.getBoundingBox()])
+        }
+        break
+      case rhino3dm.ObjectType.Surface:
+        console.warn('TODO: Implement surface')
+        break
+      case rhino3dm.ObjectType.Brep:
+        {
+          let faces = geometry.faces()
+          for (let faceIndex = 0; faceIndex < faces.count; faceIndex++) {
+            let face = faces.get(faceIndex)
+            let mesh = face.getMesh(rhino3dm.MeshType.Any)
+            if (mesh) {
+              let threeMesh = this.meshToThreejs(mesh, color)
+              objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
+              mesh.delete()
+            }
+            face.delete()
+          }
+          faces.delete()
+        }
+        break
+      case rhino3dm.ObjectType.Mesh:
+        {
+          let threeMesh = this.meshToThreejs(geometry, color)
+          objectsToAdd.push([threeMesh, geometry.getBoundingBox()])
+        }
+        break
+      case rhino3dm.ObjectType.Light:
+        console.warn('TODO: Implement light')
+        break
+      case rhino3dm.ObjectType.Annotation:
+        console.warn('TODO: Implement annotation')
+        break
+      case rhino3dm.ObjectType.InstanceReference:
+        console.warn('TODO: Implement instance reference')
+        break
+      case rhino3dm.ObjectType.TextDot:
+        console.warn('TODO: Implement dot')
+        break
+      case rhino3dm.ObjectType.Hatch:
+        console.warn('TODO: Implement hatch')
+        break
+      case rhino3dm.ObjectType.SubD:
+        console.warn('TODO: Implement SubD')
+        break
+      case rhino3dm.ObjectType.ClipPlane:
+        console.warn('TODO: Implement clipplane')
+        break
+      case rhino3dm.ObjectType.Extrusion:
+        {
+          let mesh = geometry.getMesh(rhino3dm.MeshType.Any)
+          if (mesh) {
+            let threeMesh = this.meshToThreejs(mesh, color)
+            objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
+            mesh.delete()
+          }
+        }
+        break
+      default:
+        break
+    }
+    return objectsToAdd
   }
 }
 

@@ -1,4 +1,3 @@
-import SceneUtilities from './SceneUtilities.js'
 import * as THREE from 'three'
 
 let _rhino3dm = null
@@ -60,7 +59,6 @@ let RhinoApp = {
       startwait()
       rhino3dmPromise.then(r => {
         _rhino3dm = r
-        SceneUtilities.init(_rhino3dm)
         endwait()
         console.log('rhino3dm loaded')
         if (_cachedDoc != null) {
