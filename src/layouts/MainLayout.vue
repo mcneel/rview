@@ -87,7 +87,7 @@
             <q-toggle v-model="viewmodel.gridVisible" @input="updateVisibility()"/>
           </q-item-section>
         </q-item>
-        <q-item clickable>
+        <q-item>
           <q-item-section avatar>
             <q-icon name="brightness_low"/>
           </q-item-section>
@@ -95,7 +95,7 @@
             <q-item-label>Light Color</q-item-label>
           </q-item-section>
           <q-item-section side>
-            <q-btn round size="s" icon="colorize" color="primary">
+            <q-btn round size="xs" icon="colorize" color="primary">
               <q-popup-proxy>
                 <q-color v-model="viewmodel.lightColor" @input="updateColors()"/>
               </q-popup-proxy>
