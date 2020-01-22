@@ -21,6 +21,16 @@
             Zoom Extents
           </q-tooltip>
         </q-fab-action>
+        <q-fab-action v-if="viewmodel.perspectiveCamera"
+          color="primary"
+          icon="img:statics/icons/3D.svg"
+          @click="setProjection(false)">
+        </q-fab-action>
+        <q-fab-action v-if="!viewmodel.perspectiveCamera"
+          color="primary"
+          icon="img:statics/icons/2D.svg"
+          @click="setProjection(true)">
+        </q-fab-action>
       </q-fab>
     </q-page-sticky>
     <q-page-sticky position="bottom-right" :offset="[10, 10]" v-if="panMode">
@@ -33,6 +43,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import RhinoApp from '../RhinoApp.js'
+import SceneUtilities from '../SceneUtilities.js'
 
 let _pipeline = {
   renderer: null,
@@ -68,7 +79,7 @@ let _pipeline = {
   },
   zoomExtents: function (createNewCamera) {
     let rhino3dm = RhinoApp.getRhino3dm()
-    let b = RhinoApp.visibleObjectsBoundingBox2()
+    let b = RhinoApp.visibleObjectsBoundingBox()
     let bbox = new rhino3dm.BoundingBox(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z)
     let viewport = new rhino3dm.ViewportInfo()
     viewport.isPerspectiveProjection = RhinoApp.viewModel().perspectiveCamera
@@ -77,7 +88,7 @@ let _pipeline = {
     viewport.screenPort = [0, 0, size.x, size.y]
     let border = 0.0
     if (RhinoApp.viewModel().perspectiveCamera) {
-      viewport.setCameraLocation([40, -40, 40])
+      viewport.setCameraLocation([30, -50, 15])
     } else {
       border = (bbox.max[0] - bbox.min[0]) * 0.05
     }
@@ -106,7 +117,7 @@ let _pipeline = {
       }
       this.controls.object = this.camera
 
-      let light = new THREE.DirectionalLight(0xd9d9d9)
+      let light = new THREE.DirectionalLight(0xeeeeee)
       light.position.set(0, 0, 1)
       this.camera.add(light)
       RhinoApp.getActiveDoc().threeScene.add(this.camera)
@@ -141,7 +152,10 @@ function createScene () {
     model.threeScene.dispose()
   }
   model.threeScene = new THREE.Scene()
-  model.threeScene.background = new THREE.Color(0.9, 0.9, 0.9)
+  model.threeScene.background = new THREE.Color(0.75, 0.75, 0.75)
+  let grid = SceneUtilities.createGrid()
+  model.threeGrid = grid
+  model.threeScene.add(grid)
 }
 
 function meshToThreejs (mesh, diffuse) {
@@ -283,6 +297,14 @@ export default {
     togglePan () {
       this.panMode = !this.panMode
       this.setLeftButtonMode()
+    },
+    setProjection (perspective) {
+      if (this.viewmodel.perspectiveCamera === perspective) {
+        return
+      }
+      this.viewmodel.perspectiveCamera = perspective
+      this.updateCameraProjection()
+      this.zoomExtents()
     },
     setLeftButtonMode () {
       if (this.panMode || !this.viewmodel.perspectiveCamera) {

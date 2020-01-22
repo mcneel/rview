@@ -59,7 +59,7 @@
           >
           <template v-slot:header>
             <q-item-section avatar>
-              <q-toggle v-model="layer.visible" @input="clickVis()"/>
+              <q-toggle v-model="layer.visible" @input="updateVisibility()"/>
             </q-item-section>
             <q-item-section>
               {{layer.label}}
@@ -78,9 +78,9 @@
       <q-list bordered>
         <q-item>
           <q-item-section avatar>
-            <q-toggle v-model="viewmodel.perspectiveCamera"
-            @input="clickPerspectiveCamera()"
-            :label="viewmodel.perspectiveCamera?'Perspective':'Top'"
+            <q-toggle v-model="viewmodel.gridVisible"
+            @input="updateVisibility()"
+            label="Grid"
             />
           </q-item-section>
         </q-item>
@@ -110,10 +110,7 @@ export default {
     }
   },
   methods: {
-    clickPerspectiveCamera () {
-      this.viewmodel.onChangeCamera()
-    },
-    clickVis () {
+    updateVisibility () {
       RhinoApp.updateVisibility()
     },
     clickLayers () {

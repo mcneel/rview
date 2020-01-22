@@ -1,3 +1,5 @@
+import SceneUtilities from './SceneUtilities.js'
+
 let _rhino3dm = null
 
 let _activeDocEventWatchers = []
@@ -7,12 +9,14 @@ let _viewmodel = {
   expanded: ['Layers'],
   layers: [],
   perspectiveCamera: true,
-  onChangeCamera: function () {}
+  onChangeCamera: function () {},
+  gridVisible: true
 }
 let _model = {
   rhinoDoc: null,
   threeScene: null,
-  threeObjectsOnLayer: {}
+  threeObjectsOnLayer: {},
+  threeGrid: null
 }
 
 function addToDictionary (node, chunks, layer) {
@@ -53,6 +57,7 @@ let RhinoApp = {
       startwait()
       rhino3dmPromise.then(r => {
         _rhino3dm = r
+        SceneUtilities.init(_rhino3dm)
         endwait()
         console.log('rhino3dm loaded')
       })
@@ -73,6 +78,9 @@ let RhinoApp = {
         })
       }
     })
+    if (_model.threeGrid) {
+      _model.threeGrid.visible = _viewmodel.gridVisible
+    }
   },
   setActiveDoc (name, byteArray) {
     console.log('setActiveDoc (' + name + ')')
@@ -118,39 +126,6 @@ let RhinoApp = {
     _activeDocEventWatchers.push(eventWatcher)
   },
   visibleObjectsBoundingBox () {
-    let visibleLayers = {}
-    _viewmodel.layers.forEach((layer) => {
-      if (layer.visible) {
-        visibleLayers[layer.label] = true
-      }
-    })
-    let bbox = new _rhino3dm.BoundingBox(1, 1, 1, -1, -1, -1)
-    let doc = RhinoApp.getActiveDoc().rhinoDoc
-    let objects = doc.objects()
-    for (let i = 0; i < objects.count; i++) {
-      let modelObject = objects.get(i)
-      if (modelObject == null) {
-        continue
-      }
-      let geometry = modelObject.geometry()
-      let attr = modelObject.attributes()
-      let layer = doc.layers().get(attr.layerIndex)
-      let rootLayer = layer.fullPath.split('::')[0]
-      if (!visibleLayers[rootLayer]) {
-        continue
-      }
-      let geometryBbox = geometry.getBoundingBox()
-      bbox = _rhino3dm.BoundingBox.union(geometryBbox, bbox)
-      geometryBbox.delete()
-      layer.delete()
-      attr.delete()
-      geometry.delete()
-      modelObject.delete()
-    }
-    objects.delete()
-    return bbox
-  },
-  visibleObjectsBoundingBox2 () {
     let bbox = null
     _viewmodel.layers.forEach((layer) => {
       if (!layer.visible) {
