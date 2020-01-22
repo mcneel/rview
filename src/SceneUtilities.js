@@ -141,6 +141,21 @@ let SceneUtilities = {
     }
     points.setAttribute('position', new THREE.BufferAttribute(verts, 3))
     return points
+  },
+  meshToThreejs (mesh, diffuse) {
+    let loader = new THREE.BufferGeometryLoader()
+    var geometry = loader.parse(mesh.toThreejsJSON())
+    if (diffuse.r === 0 && diffuse.g === 0 && diffuse.b === 0) {
+      diffuse.r = 255
+      diffuse.g = 255
+      diffuse.b = 255
+    }
+    let diffusecolor = new THREE.Color(diffuse.r / 255.0, diffuse.g / 255.0, diffuse.b / 255.0)
+    let material = new THREE.MeshPhongMaterial({
+      color: diffusecolor,
+      side: THREE.DoubleSide
+    })
+    return new THREE.Mesh(geometry, material)
   }
 }
 

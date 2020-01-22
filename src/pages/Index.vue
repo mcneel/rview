@@ -1,5 +1,5 @@
 <template>
-  <q-page id='cvs' class="flex flex-center">
+  <q-page id='canvasParent' class="flex flex-center">
     <q-card flat v-if="!viewmodel.docExists">
       <q-img alt="rview" src="statics/logo.png"/>
       <q-card-section>
@@ -56,13 +56,13 @@ let _pipeline = {
     THREE.Object3D.DefaultUp = new THREE.Vector3(0, 0, 1)
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
     this.renderer.setPixelRatio(window.devicePixelRatio)
-    this.renderer.setSize(window.innerWidth, window.innerHeight)
-    let canvas = document.getElementById('cvs')
+    let canvas = document.getElementById('canvasParent')
+    this.renderer.setSize(canvas.clientWidth, canvas.clientHeight)
     // canvas.insertBefore(canvas.children[0], _pipeline.renderer.domElement)
     canvas.appendChild(this.renderer.domElement)
     window.addEventListener('resize', () => animate(true), false)
 
-    this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000)
+    this.camera = new THREE.PerspectiveCamera(30, canvas.clientWidth / canvas.clientHeight, 1, 1000)
     this.camera.position.z = 40
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.screenSpacePanning = true
@@ -109,7 +109,7 @@ let _pipeline = {
       }
       viewport.setFrustum(fr.left, fr.right, fr.bottom, fr.top, fr.near, fr.far)
       if (RhinoApp.viewModel().perspectiveCamera) {
-        this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000)
+        this.camera = new THREE.PerspectiveCamera(30, size.x / size.y, 1, 1000)
       } else {
         fr = viewport.getFrustum()
         this.camera = new THREE.OrthographicCamera(fr.left, fr.right, fr.top, fr.bottom, fr.near, fr.far)
@@ -125,9 +125,7 @@ let _pipeline = {
     }
 
     let location = viewport.cameraLocation
-    this.camera.position.x = location[0]
-    this.camera.position.y = location[1]
-    this.camera.position.z = location[2]
+    this.camera.position.set(location[0], location[1], location[2])
     this.camera.updateProjectionMatrix()
     this.controls.target.set(0, 0, 0)
     viewport.delete()
@@ -136,9 +134,10 @@ let _pipeline = {
 
 let animate = function (windowResize = false) {
   if (windowResize) {
-    _pipeline.camera.aspect = window.innerWidth / window.innerHeight
+    let canvas = document.getElementById('canvasParent')
+    _pipeline.camera.aspect = canvas.clientWidth / canvas.clientHeight
     _pipeline.camera.updateProjectionMatrix()
-    _pipeline.renderer.setSize(window.innerWidth, window.innerHeight)
+    _pipeline.renderer.setSize(canvas.clientWidth, canvas.clientHeight)
   }
   requestAnimationFrame(animate)
   _pipeline.controls.update()
@@ -159,21 +158,6 @@ function createScene () {
   model.threeScene.add(grid)
 }
 
-function meshToThreejs (mesh, diffuse) {
-  let loader = new THREE.BufferGeometryLoader()
-  var geometry = loader.parse(mesh.toThreejsJSON())
-  if (diffuse.r === 0 && diffuse.g === 0 && diffuse.b === 0) {
-    diffuse.r = 255
-    diffuse.g = 255
-    diffuse.b = 255
-  }
-  let diffusecolor = new THREE.Color(diffuse.r / 255.0, diffuse.g / 255.0, diffuse.b / 255.0)
-  let material = new THREE.MeshPhongMaterial({
-    color: diffusecolor,
-    side: THREE.DoubleSide
-  })
-  return new THREE.Mesh(geometry, material)
-}
 function onActiveDocChanged () {
   console.log('Building Scene')
   createScene()
@@ -196,37 +180,87 @@ function onActiveDocChanged () {
     }
     let color = attr.drawColor(doc)
     let objectsToAdd = []
-    if (geometry instanceof rhino3dm.Mesh) {
-      let threeMesh = meshToThreejs(geometry, color)
-      objectsToAdd.push([threeMesh, geometry.getBoundingBox()])
-    }
-    if (geometry instanceof rhino3dm.Brep) {
-      let faces = geometry.faces()
-      for (let faceIndex = 0; faceIndex < faces.count; faceIndex++) {
-        let face = faces.get(faceIndex)
-        let mesh = face.getMesh(rhino3dm.MeshType.Any)
-        if (mesh) {
-          let threeMesh = meshToThreejs(mesh, color)
-          objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
-          mesh.delete()
+    const objectType = geometry.objectType
+    switch (objectType) {
+      case rhino3dm.ObjectType.Point:
+        {
+          let pointMaterial = new THREE.PointsMaterial({ color: color })
+          let pointGeometry = new THREE.Geometry()
+          let pt = geometry.location
+          pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
+          objectsToAdd.push([new THREE.Points(pointGeometry, pointMaterial), geometry.getBoundingBox()])
         }
-        face.delete()
-      }
-      faces.delete()
-    }
-    if (geometry instanceof rhino3dm.Curve) {
-      let points = SceneUtilities.curveToBufferGeometry(geometry, 21)
-      let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
-      let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
-      let polyline = new THREE.Line(points, wireMaterial)
-      objectsToAdd.push([polyline, geometry.getBoundingBox()])
-    }
-    if (geometry instanceof rhino3dm.Point) {
-      let pointMaterial = new THREE.PointsMaterial({ color: color })
-      let pointGeometry = new THREE.Geometry()
-      let pt = geometry.location
-      pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
-      objectsToAdd.push([new THREE.Points(pointGeometry, pointMaterial), geometry.getBoundingBox()])
+        break
+      case rhino3dm.ObjectType.PointSet:
+        console.log('TODO: Implement point cloud')
+        break
+      case rhino3dm.ObjectType.Curve:
+        {
+          let points = SceneUtilities.curveToBufferGeometry(geometry, 21)
+          let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
+          let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
+          let polyline = new THREE.Line(points, wireMaterial)
+          objectsToAdd.push([polyline, geometry.getBoundingBox()])
+        }
+        break
+      case rhino3dm.ObjectType.Surface:
+        console.log('TODO: Implement surface')
+        break
+      case rhino3dm.ObjectType.Brep:
+        {
+          let faces = geometry.faces()
+          for (let faceIndex = 0; faceIndex < faces.count; faceIndex++) {
+            let face = faces.get(faceIndex)
+            let mesh = face.getMesh(rhino3dm.MeshType.Any)
+            if (mesh) {
+              let threeMesh = SceneUtilities.meshToThreejs(mesh, color)
+              objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
+              mesh.delete()
+            }
+            face.delete()
+          }
+          faces.delete()
+        }
+        break
+      case rhino3dm.ObjectType.Mesh:
+        {
+          let threeMesh = SceneUtilities.meshToThreejs(geometry, color)
+          objectsToAdd.push([threeMesh, geometry.getBoundingBox()])
+        }
+        break
+      case rhino3dm.ObjectType.Light:
+        console.log('TODO: Implement light')
+        break
+      case rhino3dm.ObjectType.Annotation:
+        console.log('TODO: Implement annotation')
+        break
+      case rhino3dm.ObjectType.InstanceReference:
+        console.log('TODO: Implement instance reference')
+        break
+      case rhino3dm.ObjectType.TextDot:
+        console.log('TODO: Implement dot')
+        break
+      case rhino3dm.ObjectType.Hatch:
+        console.log('TODO: Implement hatch')
+        break
+      case rhino3dm.ObjectType.SubD:
+        console.log('TODO: Implement SubD')
+        break
+      case rhino3dm.ObjectType.ClipPlane:
+        console.log('TODO: Implement clipplane')
+        break
+      case rhino3dm.ObjectType.Extrusion:
+        {
+          let mesh = geometry.getMesh(rhino3dm.MeshType.Any)
+          if (mesh) {
+            let threeMesh = SceneUtilities.meshToThreejs(mesh, color)
+            objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
+            mesh.delete()
+          }
+        }
+        break
+      default:
+        break
     }
 
     objectsToAdd.forEach((obj) => {

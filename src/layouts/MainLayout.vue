@@ -2,22 +2,20 @@
   <q-layout view="hHh lpR fFf">
     <q-header elevated>
       <q-toolbar>
-        <q-btn @click="clickFolder()"
+        <q-btn @click="toggleDrawer(drawers.FILE)"
           dense
           :flat="!fileDrawerVisible"
           icon="folder"
           :color="!fileDrawerVisible ? '' : 'secondary'"
         />
-
-        <q-btn @click="clickLayers()"
+        <q-btn @click="toggleDrawer(drawers.LAYER)"
           dense
           :flat="!layerDrawerVisible"
           :color="!layerDrawerVisible ? '' : 'secondary'"
           icon="layers"
           :disable="!viewmodel.docExists"
         />
-
-        <q-btn @click="clickView()"
+        <q-btn @click="toggleDrawer(drawers.VIEW)"
           dense
           :flat="!viewDrawerVisible"
           :color="!viewDrawerVisible ? '' : 'secondary'"
@@ -27,9 +25,7 @@
 
         <q-toolbar-title>
         </q-toolbar-title>
-        <div>
-          {{viewmodel.filename}}
-        </div>
+        <div>{{viewmodel.filename}}</div>
       </q-toolbar>
     </q-header>
 
@@ -59,7 +55,7 @@
           >
           <template v-slot:header>
             <q-item-section avatar>
-              <q-toggle v-model="layer.visible" @input="updateVisibility()"/>
+              <q-toggle v-model="layer.visible" @input="RhApp().updateVisibility()"/>
             </q-item-section>
             <q-item-section>
               {{layer.label}}
@@ -84,7 +80,7 @@
             <q-item-label>Grid</q-item-label>
           </q-item-section>
           <q-item-section side>
-            <q-toggle v-model="viewmodel.gridVisible" @input="updateVisibility()"/>
+            <q-toggle v-model="viewmodel.gridVisible" @input="RhApp().updateVisibility()"/>
           </q-item-section>
         </q-item>
         <q-item>
@@ -97,7 +93,7 @@
           <q-item-section side>
             <q-btn round size="xs" icon="colorize" color="primary">
               <q-popup-proxy>
-                <q-color v-model="viewmodel.lightColor" @input="updateColors()"/>
+                <q-color v-model="viewmodel.lightColor" @input="RhApp().updateColors()"/>
               </q-popup-proxy>
             </q-btn>
           </q-item-section>
@@ -124,34 +120,21 @@ export default {
       layerDrawerVisible: false,
       fileDrawerVisible: true,
       viewDrawerVisible: false,
-      viewmodel: vm
+      viewmodel: vm,
+      drawers: { FILE: 1, LAYER: 2, VIEW: 3 }
     }
   },
   methods: {
-    updateVisibility () {
-      RhinoApp.updateVisibility()
+    RhApp () {
+      return RhinoApp
     },
-    updateColors () {
-      RhinoApp.updateColors()
-    },
-    clickLayers () {
-      this.fileDrawerVisible = false
-      this.viewDrawerVisible = false
-      this.layerDrawerVisible = !this.layerDrawerVisible
-    },
-    clickFolder () {
-      this.layerDrawerVisible = false
-      this.viewDrawerVisible = false
-      this.fileDrawerVisible = !this.fileDrawerVisible
-    },
-    clickView () {
-      this.layerDrawerVisible = false
-      this.fileDrawerVisible = false
-      this.viewDrawerVisible = !this.viewDrawerVisible
+    toggleDrawer (drawer) {
+      this.fileDrawerVisible = (drawer === this.drawers.FILE) ? !this.fileDrawerVisible : false
+      this.layerDrawerVisible = (drawer === this.drawers.LAYER) ? !this.layerDrawerVisible : false
+      this.viewDrawerVisible = (drawer === this.drawers.VIEW) ? !this.viewDrawerVisible : false
     },
     openSample () {
-      let fetchPromise = fetch('statics/hello_mesh.3dm')
-      fetchPromise.then((res) => {
+      fetch('statics/hello_mesh.3dm').then((res) => {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
           RhinoApp.setActiveDoc('RhinoLogo.3dm', new Uint8Array(buffer))
@@ -172,6 +155,7 @@ export default {
         reader.readAsArrayBuffer(file)
       }
       fileInput.type = 'file'
+      fileInput.accept = '.3dm'
       fileInput.style.display = 'none'
       fileInput.onchange = readFile
       document.body.appendChild(fileInput)
