@@ -154,7 +154,7 @@ let SceneUtilities = {
     })
     return new THREE.Mesh(geometry, material)
   },
-  createThreeGeometry (geometry, color) {
+  createThreeGeometry (geometry, color, doc) {
     let rhino3dm = RhinoApp.getRhino3dm()
     let objectsToAdd = []
     const objectType = geometry.objectType
@@ -221,7 +221,33 @@ let SceneUtilities = {
         console.warn('TODO: Implement annotation')
         break
       case rhino3dm.ObjectType.InstanceReference:
-        console.warn('TODO: Implement instance reference')
+        {
+          let parentId = geometry.parentIdefId
+          let xf = geometry.xform.toFloatArray(true)
+          let group = new THREE.Group()
+          let matrix = new THREE.Matrix4()
+          matrix.set(xf[0], xf[1], xf[2], xf[3], xf[4], xf[5], xf[6], xf[7],
+            xf[8], xf[9], xf[10], xf[11], xf[12], xf[13], xf[14], xf[15])
+          group.applyMatrix(matrix)
+          objectsToAdd.push([group, null])
+
+          let idefTable = doc.instanceDefinitions()
+          let objectTable = doc.objects()
+          let idef = idefTable.findId(parentId)
+          let objectIds = idef.getObjectIds()
+          objectIds.forEach((id) => {
+            let modelObject = objectTable.findId(id)
+            let childGeometry = modelObject.geometry()
+            let attr = modelObject.attributes()
+            let childColor = attr.drawColor(doc)
+            let children = this.createThreeGeometry(childGeometry, childColor, doc)
+            children.forEach((child) => {
+              group.add(child[0])
+            })
+          })
+          objectTable.delete()
+          idefTable.delete()
+        }
         break
       case rhino3dm.ObjectType.TextDot:
         console.warn('TODO: Implement dot')

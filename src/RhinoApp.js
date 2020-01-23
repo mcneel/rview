@@ -150,6 +150,7 @@ let RhinoApp = {
         return
       }
       objects.forEach((threeObject) => {
+        if (threeObject.boundingBox == null) { return }
         if (bbox == null) {
           bbox = threeObject.boundingBox.clone()
         } else {

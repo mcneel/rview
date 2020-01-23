@@ -162,21 +162,26 @@ function onActiveDocChanged () {
     }
     let geometry = modelObject.geometry()
     let attr = modelObject.attributes()
+    if (attr.isInstanceDefinitionObject) {
+      continue
+    }
     let layer = doc.layers().get(attr.layerIndex)
     let rootLayer = layer.fullPath.split('::')[0]
     if (!model.threeObjectsOnLayer[rootLayer]) {
       model.threeObjectsOnLayer[rootLayer] = []
     }
     let color = attr.drawColor(doc)
-    let objectsToAdd = SceneUtilities.createThreeGeometry(geometry, color)
+    let objectsToAdd = SceneUtilities.createThreeGeometry(geometry, color, doc)
 
     objectsToAdd.forEach((obj) => {
       let threeGeometry = obj[0]
       let bbox = obj[1]
-      let minPoint = new THREE.Vector3(bbox.min[0], bbox.min[1], bbox.min[2])
-      let maxPoint = new THREE.Vector3(bbox.max[0], bbox.max[1], bbox.max[2])
-      threeGeometry.boundingBox = new THREE.Box3(minPoint, maxPoint)
-      bbox.delete()
+      if (bbox) {
+        let minPoint = new THREE.Vector3(bbox.min[0], bbox.min[1], bbox.min[2])
+        let maxPoint = new THREE.Vector3(bbox.max[0], bbox.max[1], bbox.max[2])
+        threeGeometry.boundingBox = new THREE.Box3(minPoint, maxPoint)
+        bbox.delete()
+      }
       model.threeScene.add(threeGeometry)
       model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
       // let box = new THREE.BoxHelper(threeGeometry, 0x000000)
