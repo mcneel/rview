@@ -89,7 +89,7 @@ let _pipeline = {
     bbox.delete()
 
     if (createNewCamera) {
-      RhinoApp.getActiveDoc().threeScene.remove(this.camera)
+      RhinoApp.getActiveDoc().three.middleground.remove(this.camera)
       let fr = viewport.getFrustum()
       if (fr.near > 0.1) {
         fr.near = 0.1
@@ -111,7 +111,7 @@ let _pipeline = {
       light.position.set(0, 0, 1)
       RhinoApp.getActiveDoc().cameraLight = light
       this.camera.add(light)
-      RhinoApp.getActiveDoc().threeScene.add(this.camera)
+      RhinoApp.getActiveDoc().three.middleground.add(this.camera)
     }
 
     let location = viewport.cameraLocation
@@ -132,20 +132,24 @@ let animate = function (windowResize = false) {
   requestAnimationFrame(animate)
   _pipeline.controls.update()
   let model = RhinoApp.getActiveDoc()
-  _pipeline.renderer.render(model.threeScene, _pipeline.camera)
+  _pipeline.renderer.autoClear = false
+  _pipeline.renderer.render(model.three.background, _pipeline.camera)
+  _pipeline.renderer.render(model.three.middleground, _pipeline.camera)
 }
 
 function createScene () {
   _pipeline.initialize()
+  RhinoApp.disposeMiddleground()
   let model = RhinoApp.getActiveDoc()
-  if (model.threeScene) {
-    model.threeScene.dispose()
+  model.three.middleground = new THREE.Scene()
+
+  if (model.three.background == null) {
+    model.three.background = new THREE.Scene()
+    model.three.background.background = new THREE.Color(0.75, 0.75, 0.75)
+    let grid = SceneUtilities.createGrid()
+    model.threeGrid = grid
+    model.three.background.add(grid)
   }
-  model.threeScene = new THREE.Scene()
-  model.threeScene.background = new THREE.Color(0.75, 0.75, 0.75)
-  let grid = SceneUtilities.createGrid()
-  model.threeGrid = grid
-  model.threeScene.add(grid)
 }
 
 function onActiveDocChanged () {
@@ -182,10 +186,10 @@ function onActiveDocChanged () {
         threeGeometry.boundingBox = new THREE.Box3(minPoint, maxPoint)
         bbox.delete()
       }
-      model.threeScene.add(threeGeometry)
+      model.three.middleground.add(threeGeometry)
       model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
       // let box = new THREE.BoxHelper(threeGeometry, 0x000000)
-      // model.threeScene.add(box)
+      // model.three.middleground.add(box)
       // model.threeObjectsOnLayer[rootLayer].push(box)
     })
 

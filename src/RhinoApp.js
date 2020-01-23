@@ -15,7 +15,10 @@ let _viewmodel = {
 }
 let _model = {
   rhinoDoc: null,
-  threeScene: null,
+  three: {
+    background: null,
+    middleground: null
+  },
   threeObjectsOnLayer: {},
   threeGrid: null,
   cameraLight: null
@@ -102,10 +105,7 @@ let RhinoApp = {
     if (_model.rhinoDoc) {
       _model.rhinoDoc.delete()
     }
-    if (_model.threeScene) {
-      _model.threeScene.dispose()
-      _model.threeScene = null
-    }
+    this.disposeMiddleground()
     _model.threeObjectsOnLayer = {}
     _model.rhinoDoc = doc
     _viewmodel.docExists = (doc != null)
@@ -138,6 +138,12 @@ let RhinoApp = {
   },
   addActiveDocChangedEventWatcher (eventWatcher) {
     _activeDocEventWatchers.push(eventWatcher)
+  },
+  disposeMiddleground () {
+    if (_model.three.middleground) {
+      _model.three.middleground.dispose()
+      _model.three.middleground = null
+    }
   },
   visibleObjectsBoundingBox () {
     let bbox = null
