@@ -37,7 +37,7 @@
             <q-icon name="img:statics/logo.png"/>
           </q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="open3dm()">
+        <q-item clickable v-ripple @click="openFile()">
           <q-item-section>Open...</q-item-section>
           <q-item-section avatar>
             <q-icon color="primary" name="folder" />
@@ -137,11 +137,11 @@ export default {
       fetch('statics/hello_mesh.3dm').then((res) => {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
-          RhinoApp.setActiveDoc('RhinoLogo.3dm', new Uint8Array(buffer))
+          RhinoApp.openFile('RhinoLogo.3dm', new Uint8Array(buffer))
         })
       })
     },
-    open3dm () {
+    openFile () {
       let fileInput = document.createElement('input')
       let readFile = function (e) {
         let file = e.target.files[0]
@@ -149,13 +149,17 @@ export default {
         let reader = new FileReader()
         reader.onload = function (e) {
           var contents = e.target.result
-          RhinoApp.setActiveDoc(file.name, contents)
+          RhinoApp.openFile(file.name, contents)
           document.body.removeChild(fileInput)
         }
-        reader.readAsArrayBuffer(file)
+        if (file.name.endsWith('.obj') || file.name.endsWith('.ply')) {
+          reader.readAsText(file)
+        } else {
+          reader.readAsArrayBuffer(file)
+        }
       }
       fileInput.type = 'file'
-      fileInput.accept = '.3dm'
+      fileInput.accept = '.3dm, .obj, .drc, .ply'
       fileInput.style.display = 'none'
       fileInput.onchange = readFile
       document.body.appendChild(fileInput)

@@ -1,4 +1,7 @@
 import * as THREE from 'three'
+import FileObj from './FileObj.js'
+import FileDraco from './FileDraco.js'
+import FilePly from './FilePly.js'
 
 let _rhino3dm = null
 let _cachedDoc = null
@@ -68,7 +71,7 @@ let RhinoApp = {
           let name = _cachedDoc[0]
           let byteArray = _cachedDoc[1]
           _cachedDoc = null
-          this.setActiveDoc(name, byteArray)
+          this.openFile(name, byteArray)
         }
       })
     }
@@ -95,13 +98,28 @@ let RhinoApp = {
   updateColors () {
     _model.cameraLight.color = new THREE.Color(_viewmodel.lightColor)
   },
-  setActiveDoc (name, byteArray) {
-    console.log('setActiveDoc (' + name + ')')
+  openFile (name, contents) {
     if (_rhino3dm == null) {
-      _cachedDoc = [name, byteArray]
+      _cachedDoc = [name, contents]
       return
     }
-    let doc = _rhino3dm.File3dm.fromByteArray(byteArray)
+
+    if (name.endsWith('.obj')) {
+      let doc = FileObj.readFile(name, contents)
+      this.setActiveDoc(name, doc)
+    } else if (name.endsWith('.drc')) {
+      FileDraco.readFile(name, contents)
+    } else if (name.endsWith('.ply')) {
+      let doc = FilePly.readFile(name, contents)
+      this.setActiveDoc(name, doc)
+    } else {
+      let doc = _rhino3dm.File3dm.fromByteArray(contents)
+      this.setActiveDoc(name, doc)
+    }
+  },
+  setActiveDoc (name, doc) {
+    console.log('setActiveDoc (' + name + ')')
+
     if (_model.rhinoDoc) {
       _model.rhinoDoc.delete()
     }

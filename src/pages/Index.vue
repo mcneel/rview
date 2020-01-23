@@ -241,7 +241,7 @@ export default {
       fetch(url).then(async res => {
         let buffer = await res.arrayBuffer()
         let arr = new Uint8Array(buffer)
-        RhinoApp.setActiveDoc(url, arr)
+        RhinoApp.openFile(url, arr)
       })
     },
     updateCameraProjection () {
