@@ -69,39 +69,33 @@ let _pipeline = {
   },
   zoomExtents: function (createNewCamera) {
     let rhino3dm = RhinoApp.getRhino3dm()
-    let b = RhinoApp.visibleObjectsBoundingBox()
-    let bbox = new rhino3dm.BoundingBox(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z)
-    let viewport = new rhino3dm.ViewportInfo()
-    viewport.isPerspectiveProjection = RhinoApp.viewModel().perspectiveCamera
+    let viewport = RhinoApp.viewModel().perspectiveCamera
+      ? rhino3dm.ViewportInfo.defaultPerspective()
+      : rhino3dm.ViewportInfo.defaultTop()
     let size = new THREE.Vector2(0, 0)
     _pipeline.renderer.getSize(size)
     viewport.screenPort = [0, 0, size.x, size.y]
-    let border = 0.0
-    if (RhinoApp.viewModel().perspectiveCamera) {
-      viewport.setCameraLocation([30, -50, 15])
-    } else {
-      border = (bbox.max[0] - bbox.min[0]) * 0.05
-    }
-    let width = bbox.max[0] - bbox.min[0]
+
+    let b = RhinoApp.visibleObjectsBoundingBox()
+    let bbox = new rhino3dm.BoundingBox(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z)
+    let target = bbox.center
+
+    let bboxWidth = bbox.max[0] - bbox.min[0]
+    let bboxHeight = bbox.max[1] - bbox.min[1]
+    let bboxDepth = bbox.max[2] - bbox.min[2]
+    bbox.inflate(bboxWidth * 0.2, bboxHeight * 0.2, bboxDepth * 0.2)
+    let width = bboxWidth
     let height = width * size.y / size.x
     viewport.setFrustum(-width / 2.0, width / 2.0, -height / 2.0, height / 2.0, 0.1, 1000)
-    viewport.dollyExtents(bbox, border)
+    viewport.extents(50.0 * 3.14159 / 180.0, bbox)
     bbox.delete()
 
     if (createNewCamera) {
       RhinoApp.getActiveDoc().three.middleground.remove(this.camera)
       let fr = viewport.getFrustum()
-      if (fr.near > 0.1) {
-        fr.near = 0.1
-      }
-      if (fr.far < 1000) {
-        fr.far = 1000
-      }
-      viewport.setFrustum(fr.left, fr.right, fr.bottom, fr.top, fr.near, fr.far)
       if (RhinoApp.viewModel().perspectiveCamera) {
         this.camera = new THREE.PerspectiveCamera(30, size.x / size.y, 1, 1000)
       } else {
-        fr = viewport.getFrustum()
         this.camera = new THREE.OrthographicCamera(fr.left, fr.right, fr.top, fr.bottom, fr.near, fr.far)
         this.camera.up.set(viewport.cameraUp[0], viewport.cameraUp[1], viewport.cameraUp[2])
       }
@@ -117,7 +111,7 @@ let _pipeline = {
     let location = viewport.cameraLocation
     this.camera.position.set(location[0], location[1], location[2])
     this.camera.updateProjectionMatrix()
-    this.controls.target.set(0, 0, 0)
+    this.controls.target.set(target[0], target[1], target[2])
     viewport.delete()
   }
 }
