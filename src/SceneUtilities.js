@@ -152,7 +152,9 @@ let SceneUtilities = {
       color: diffusecolor,
       side: THREE.DoubleSide
     })
-    return new THREE.Mesh(geometry, material)
+    let meshObject = new THREE.Mesh(geometry, material)
+    meshObject.userData['diffuse'] = diffuse
+    return meshObject
   },
   createThreeGeometry (geometry, color, doc) {
     let rhino3dm = RhinoApp.getRhino3dm()
@@ -275,6 +277,23 @@ let SceneUtilities = {
         break
     }
     return objectsToAdd
+  },
+  createPBRMaterial (name) {
+    let material = new THREE.MeshPhysicalMaterial()
+    let tl = new THREE.TextureLoader()
+
+    tl.setPath('statics/materials/PBR/' + name + '/')
+    material.map = tl.load(name + '_base.png')
+    material.aoMmap = tl.load(name + '_ao.png')
+    material.normalMap = tl.load(name + '_normal.png')
+    material.metalnessMap = tl.load(name + '_metallic.png')
+
+    material.metalness = 0.75
+    material.roughness = 0.15
+    material.normalScale.x = 1.0
+    material.normalScale.y = 1.0
+    // material.envMap = scene.background
+    return material
   }
 }
 

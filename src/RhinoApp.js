@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import FileObj from './FileObj.js'
 import FileDraco from './FileDraco.js'
 import FilePly from './FilePly.js'
+import SceneUtilities from './SceneUtilities.js'
 
 let _rhino3dm = null
 let _cachedDoc = null
@@ -21,7 +22,10 @@ let _viewmodel = {
   // 'SwedishRoyalCastle'],
   backgroundColor: 'rgb(190,190,190)',
   backgroundGradientTop: 'rgb(54,109,168)',
-  backgroundGradientBottom: 'rgb(165,165,165)'
+  backgroundGradientBottom: 'rgb(165,165,165)',
+  currentMaterialStyle: 'Basic',
+  materialOptions: ['Basic', 'PBR: Carbon Fiber', 'PBR: Chipped Paint Metal',
+    'PBR: Scuffed Plastic', 'PBR: Streaked Metal']
 }
 let _model = {
   rhinoDoc: null,
@@ -112,6 +116,32 @@ let RhinoApp = {
     } else {
       _model.three.setBackground(_model.three.background, null, null, _viewmodel.currentBackgroundStyle)
     }
+  },
+  updateMaterial () {
+    let material = null
+    if (_viewmodel.currentMaterialStyle !== _viewmodel.materialOptions[0]) {
+      let name = _viewmodel.currentMaterialStyle.substr('PBR: '.length).toLowerCase()
+      name = name.replace(/ /g, '-')
+      material = SceneUtilities.createPBRMaterial(name)
+    }
+    _viewmodel.layers.forEach((layer) => {
+      let objects = _model.threeObjectsOnLayer[layer.label]
+      if (objects != null) {
+        objects.forEach((obj) => {
+          if (obj.type === 'Mesh') {
+            if (material == null) {
+              let diffuse = obj.userData['diffuse']
+              obj.material = new THREE.MeshPhongMaterial({
+                color: diffuse,
+                side: THREE.DoubleSide
+              })
+            } else {
+              obj.material = material
+            }
+          }
+        })
+      }
+    })
   },
   openFile (name, contents) {
     if (_rhino3dm == null) {
