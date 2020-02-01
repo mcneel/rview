@@ -91,7 +91,7 @@ let _pipeline = {
     bbox.delete()
 
     if (createNewCamera) {
-      RhinoApp.getActiveDoc().three.middleground.remove(this.camera)
+      RhinoApp.getActiveModel().three.middleground.remove(this.camera)
       let fr = viewport.getFrustum()
       if (RhinoApp.viewModel().perspectiveCamera) {
         this.camera = new THREE.PerspectiveCamera(30, size.x / size.y, 1, 1000)
@@ -103,9 +103,9 @@ let _pipeline = {
 
       let light = new THREE.DirectionalLight(RhinoApp.viewModel().lightColor)
       light.position.set(0, 0, 1)
-      RhinoApp.getActiveDoc().cameraLight = light
+      RhinoApp.getActiveModel().cameraLight = light
       this.camera.add(light)
-      RhinoApp.getActiveDoc().three.middleground.add(this.camera)
+      RhinoApp.getActiveModel().three.middleground.add(this.camera)
     }
 
     let location = viewport.cameraLocation
@@ -125,16 +125,44 @@ let animate = function (windowResize = false) {
   }
   requestAnimationFrame(animate)
   _pipeline.controls.update()
-  let model = RhinoApp.getActiveDoc()
+  let model = RhinoApp.getActiveModel()
   _pipeline.renderer.autoClear = false
   _pipeline.renderer.render(model.three.background, _pipeline.camera)
   _pipeline.renderer.render(model.three.middleground, _pipeline.camera)
 }
 
+function setBackground (scene, color1, color2 = null, environment = null) {
+  if (!color2 && !environment) {
+    scene.background = new THREE.Color(color1)
+  }
+  if (color1 && color2) {
+    let canvas = document.createElement('canvas')
+    canvas.width = 128
+    canvas.height = 128
+    let context = canvas.getContext('2d')
+    let gradient = context.createLinearGradient(0, 0, 0, canvas.height)
+    gradient.addColorStop(1, color2)
+    gradient.addColorStop(0.1, color1)
+    context.fillStyle = gradient
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    scene.background = new THREE.CanvasTexture(canvas)
+  }
+  if (environment) {
+    let ctl = new THREE.CubeTextureLoader()
+    ctl.setPath('statics/cubemaps/' + environment + '/')
+    let texture = ctl.load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'])
+    // let matrix = new THREE.Matrix4()
+    // matrix = matrix.makeRotationY(3.1415 / 2.0)
+    // texture.matrix.setFromMatrix4(matrix)
+    scene.background = texture
+    animate(true)
+  }
+}
+
 function createScene () {
   _pipeline.initialize()
   RhinoApp.disposeMiddleground()
-  let model = RhinoApp.getActiveDoc()
+  let model = RhinoApp.getActiveModel()
   model.three.middleground = new THREE.Scene()
 
   if (model.three.background == null) {
@@ -144,12 +172,14 @@ function createScene () {
     model.threeGrid = grid
     model.three.background.add(grid)
   }
+
+  model.three.setBackground = setBackground
 }
 
 function onActiveDocChanged () {
   console.log('Building Scene')
   createScene()
-  let model = RhinoApp.getActiveDoc()
+  let model = RhinoApp.getActiveModel()
   let doc = model.rhinoDoc
 
   let objects = doc.objects()

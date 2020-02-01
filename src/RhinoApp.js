@@ -14,13 +14,21 @@ let _viewmodel = {
   perspectiveCamera: true,
   onChangeCamera: function () {},
   gridVisible: true,
-  lightColor: 'rgb(240,240,240)'
+  lightColor: 'rgb(240,240,240)',
+  currentBackgroundStyle: 'Single Color',
+  backgroundOptions: ['Single Color', '2 Color Gradient'], // , 'Bridge2',
+  // 'MilkyWay', 'Park2', 'Park3Med', 'pisa', 'skyboxsun25deg',
+  // 'SwedishRoyalCastle'],
+  backgroundColor: 'rgb(190,190,190)',
+  backgroundGradientTop: 'rgb(54,109,168)',
+  backgroundGradientBottom: 'rgb(165,165,165)'
 }
 let _model = {
   rhinoDoc: null,
   three: {
     background: null,
-    middleground: null
+    middleground: null,
+    setBackground: null
   },
   threeObjectsOnLayer: {},
   threeGrid: null,
@@ -97,6 +105,13 @@ let RhinoApp = {
   },
   updateColors () {
     _model.cameraLight.color = new THREE.Color(_viewmodel.lightColor)
+    if (_viewmodel.currentBackgroundStyle === _viewmodel.backgroundOptions[0]) {
+      _model.three.setBackground(_model.three.background, _viewmodel.backgroundColor)
+    } else if (_viewmodel.currentBackgroundStyle === _viewmodel.backgroundOptions[1]) {
+      _model.three.setBackground(_model.three.background, _viewmodel.backgroundGradientTop, _viewmodel.backgroundGradientBottom)
+    } else {
+      _model.three.setBackground(_model.three.background, null, null, _viewmodel.currentBackgroundStyle)
+    }
   },
   openFile (name, contents) {
     if (_rhino3dm == null) {
@@ -151,7 +166,7 @@ let RhinoApp = {
 
     _activeDocEventWatchers.forEach((ew) => { ew() })
   },
-  getActiveDoc () {
+  getActiveModel () {
     return _model
   },
   addActiveDocChangedEventWatcher (eventWatcher) {

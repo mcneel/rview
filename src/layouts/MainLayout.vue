@@ -98,6 +98,43 @@
             </q-btn>
           </q-item-section>
         </q-item>
+        <q-expansion-item expand-separator icon="landscape" label="Background" :content-inset-level="1">
+          <q-list>
+            <q-item-section>
+              <q-select v-model="viewmodel.currentBackgroundStyle"
+                filled
+                dense
+                options-dense
+                :options="viewmodel.backgroundOptions"
+                @input="onSelectBackgroundStyle"/>
+            </q-item-section>
+            <q-item v-if="viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[0] || viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[1]">
+              <q-item-section>
+                <q-item-label>{{viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[0] ? 'Color' : 'Top Color'}}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn round size="xs" icon="colorize" color="primary">
+                  <q-popup-proxy>
+                    <q-color v-if="viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[0]" v-model="viewmodel.backgroundColor" @input="RhApp().updateColors()"/>
+                    <q-color v-if="viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[1]" v-model="viewmodel.backgroundGradientTop" @input="RhApp().updateColors()"/>
+                  </q-popup-proxy>
+                </q-btn>
+              </q-item-section>
+            </q-item>
+            <q-item v-if="viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[1]">
+              <q-item-section>
+                <q-item-label>Bottom Color</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn round size="xs" icon="colorize" color="primary">
+                  <q-popup-proxy>
+                    <q-color v-model="viewmodel.backgroundGradientBottom" @input="RhApp().updateColors()"/>
+                  </q-popup-proxy>
+                </q-btn>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-expansion-item>
       </q-list>
     </q-drawer>
 
@@ -166,6 +203,9 @@ export default {
       let eventMouse = document.createEvent('MouseEvents')
       eventMouse.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null)
       fileInput.dispatchEvent(eventMouse)
+    },
+    onSelectBackgroundStyle (style) {
+      RhinoApp.updateColors()
     }
   }
 }
