@@ -118,12 +118,15 @@ let RhinoApp = {
     }
   },
   updateMaterial () {
-    let material = null
     if (_viewmodel.currentMaterialStyle !== _viewmodel.materialOptions[0]) {
       let name = _viewmodel.currentMaterialStyle.substr('PBR: '.length).toLowerCase()
       name = name.replace(/ /g, '-')
-      material = SceneUtilities.createPBRMaterial(name)
+      SceneUtilities.createPBRMaterial(name, this.applyMaterial)
+    } else {
+      this.applyMaterial(null)
     }
+  },
+  applyMaterial (material) {
     _viewmodel.layers.forEach((layer) => {
       let objects = _model.threeObjectsOnLayer[layer.label]
       if (objects != null) {
@@ -195,6 +198,7 @@ let RhinoApp = {
     }
 
     _activeDocEventWatchers.forEach((ew) => { ew() })
+    this.updateMaterial()
   },
   getActiveModel () {
     return _model

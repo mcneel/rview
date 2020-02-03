@@ -87,7 +87,7 @@ let _pipeline = {
     let width = bboxWidth
     let height = width * size.y / size.x
     viewport.setFrustum(-width / 2.0, width / 2.0, -height / 2.0, height / 2.0, 0.1, 1000)
-    viewport.extents(50.0 * 3.14159 / 180.0, bbox)
+    viewport.extents(50.0 * Math.PI / 180.0, bbox)
     bbox.delete()
 
     if (createNewCamera) {
@@ -152,7 +152,7 @@ function setBackground (scene, color1, color2 = null, environment = null) {
     ctl.setPath('statics/cubemaps/' + environment + '/')
     let texture = ctl.load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'])
     // let matrix = new THREE.Matrix4()
-    // matrix = matrix.makeRotationY(3.1415 / 2.0)
+    // matrix = matrix.makeRotationY(Math.PI / 2.0)
     // texture.matrix.setFromMatrix4(matrix)
     scene.background = texture
     animate(true)
