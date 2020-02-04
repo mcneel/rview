@@ -75,7 +75,7 @@ let SceneUtilities = {
       }
     }
     let majorMaterial = new THREE.LineBasicMaterial({
-      color: 0x111111,
+      color: new THREE.Color(129 / 255, 134 / 255, 140 / 255),
       depthTest: false,
       depthWrite: false
     })
@@ -90,7 +90,7 @@ let SceneUtilities = {
     let major = new THREE.LineSegments(geometry, majorMaterial)  // eslint-disable-line
 
     let minorMaterial = new THREE.LineBasicMaterial({
-      color: 0x777777,
+      color: new THREE.Color(147 / 255, 153 / 255, 160 / 255),
       depthTest: false,
       depthWrite: false
     })
@@ -103,8 +103,8 @@ let SceneUtilities = {
     geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     let minor = new THREE.LineSegments(geometry, minorMaterial) // eslint-disable-line
-    grid.add(major)
     grid.add(minor)
+    grid.add(major)
 
     positions = new Float32Array([0, 0, 0, xMax, 0, 0])
     geometry = new THREE.BufferGeometry()

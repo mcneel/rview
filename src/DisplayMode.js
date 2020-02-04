@@ -35,7 +35,7 @@ class Mode {
     this.name = name
     this.showGrid = true
     this.backgroundStyle = 'Single Color'
-    this.backgroundColor = 'rgb(190,190,190)'
+    this.backgroundColor = 'rgb(157,163,170)'
     this.backgroundGradientTop = 'rgb(54,109,168)'
     this.backgroundGradientBottom = 'rgb(165,165,165)'
     this.lightColor = 'rgb(240,240,240)'

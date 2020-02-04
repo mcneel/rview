@@ -127,7 +127,9 @@ let animate = function (windowResize = false) {
   _pipeline.controls.update()
   let model = RhinoApp.getActiveModel()
   _pipeline.renderer.autoClear = false
+  _pipeline.renderer.sortObjects = false
   _pipeline.renderer.render(model.three.background, _pipeline.camera)
+  _pipeline.renderer.sortObjects = true
   _pipeline.renderer.render(model.three.middleground, _pipeline.camera)
 }
 
