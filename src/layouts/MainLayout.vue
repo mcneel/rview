@@ -72,15 +72,63 @@
 
     <q-drawer v-model="viewDrawerVisible" bordered overlay content-class="bg-grey-2">
       <q-list bordered>
-        <q-item>
-          <q-item-section avatar>
-            <q-icon name="grid_on"/>
-          </q-item-section>
-          <q-item-section>
-            <q-item-label>Grid</q-item-label>
-          </q-item-section>
+        <q-item-section>
+          <q-select v-model="currentDisplayModeName"
+            outlined
+            dense
+            options-dense
+            :options="displayModeNames()"
+            @input="RhApp().setActiveDisplayMode(currentDisplayModeName)"/>
+        </q-item-section>
+        <q-expansion-item expand-separator icon="landscape" label="Background" :content-inset-level="1">
+          <q-list>
+            <q-item-section>
+              <q-select v-model="viewmodel.displayMode.backgroundStyle"
+                filled
+                dense
+                options-dense
+                :options="backgroundModes"
+                @input="RhApp().updateColors()"/>
+            </q-item-section>
+            <q-item v-if="viewmodel.displayMode.backgroundStyle===backgroundModes[0] || viewmodel.displayMode.backgroundStyle===backgroundModes[1]">
+              <q-item-section>
+                <q-item-label>{{viewmodel.displayMode.backgroundStyle===backgroundModes[0] ? 'Color' : 'Top Color'}}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn round size="xs" icon="colorize" color="primary">
+                  <q-popup-proxy>
+                    <q-color v-if="viewmodel.displayMode.backgroundStyle===backgroundModes[0]" v-model="viewmodel.displayMode.backgroundColor" @input="RhApp().updateColors()"/>
+                    <q-color v-if="viewmodel.displayMode.backgroundStyle===backgroundModes[1]" v-model="viewmodel.displayMode.backgroundGradientTop" @input="RhApp().updateColors()"/>
+                  </q-popup-proxy>
+                </q-btn>
+              </q-item-section>
+            </q-item>
+            <q-item v-if="viewmodel.displayMode.backgroundStyle===backgroundModes[1]">
+              <q-item-section>
+                <q-item-label>Bottom Color</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn round size="xs" icon="colorize" color="primary">
+                  <q-popup-proxy>
+                    <q-color v-model="viewmodel.displayMode.backgroundGradientBottom" @input="RhApp().updateColors()"/>
+                  </q-popup-proxy>
+                </q-btn>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-expansion-item>
+        <q-item dense>
+          <q-item-section avatar><q-icon name="grid_on"/></q-item-section>
+          <q-item-section><q-item-label>Grid</q-item-label></q-item-section>
           <q-item-section side>
-            <q-toggle v-model="viewmodel.gridVisible" @input="RhApp().updateVisibility()"/>
+            <q-toggle v-model="viewmodel.displayMode.showGrid" @input="RhApp().updateVisibility()"/>
+          </q-item-section>
+        </q-item>
+        <q-item dense>
+          <q-item-section avatar></q-item-section>
+          <q-item-section><q-item-label>Surface Wires</q-item-label></q-item-section>
+          <q-item-section side>
+            <q-toggle v-model="viewmodel.displayMode.showSurfaceWires" @input="RhApp().updateVisibility()"/>
           </q-item-section>
         </q-item>
         <!--<q-item>
@@ -93,49 +141,12 @@
           <q-item-section side>
             <q-btn round size="xs" icon="colorize" color="primary">
               <q-popup-proxy>
-                <q-color v-model="viewmodel.lightColor" @input="RhApp().updateColors()"/>
+                <q-color v-model="viewmodel.displayMode.lightColor" @input="RhApp().updateColors()"/>
               </q-popup-proxy>
             </q-btn>
           </q-item-section>
         </q-item>-->
-        <q-expansion-item :value="true" expand-separator icon="landscape" label="Background" :content-inset-level="1">
-          <q-list>
-            <q-item-section>
-              <q-select v-model="viewmodel.currentBackgroundStyle"
-                filled
-                dense
-                options-dense
-                :options="viewmodel.backgroundOptions"
-                @input="RhApp().updateColors()"/>
-            </q-item-section>
-            <q-item v-if="viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[0] || viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[1]">
-              <q-item-section>
-                <q-item-label>{{viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[0] ? 'Color' : 'Top Color'}}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-btn round size="xs" icon="colorize" color="primary">
-                  <q-popup-proxy>
-                    <q-color v-if="viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[0]" v-model="viewmodel.backgroundColor" @input="RhApp().updateColors()"/>
-                    <q-color v-if="viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[1]" v-model="viewmodel.backgroundGradientTop" @input="RhApp().updateColors()"/>
-                  </q-popup-proxy>
-                </q-btn>
-              </q-item-section>
-            </q-item>
-            <q-item v-if="viewmodel.currentBackgroundStyle===viewmodel.backgroundOptions[1]">
-              <q-item-section>
-                <q-item-label>Bottom Color</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-btn round size="xs" icon="colorize" color="primary">
-                  <q-popup-proxy>
-                    <q-color v-model="viewmodel.backgroundGradientBottom" @input="RhApp().updateColors()"/>
-                  </q-popup-proxy>
-                </q-btn>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-expansion-item>
-        <q-expansion-item :value="true" expand-separator icon="palette" label="Material" :content-inset-level="1">
+        <q-expansion-item expand-separator icon="palette" label="Material" :content-inset-level="1">
           <q-list>
             <q-item-section>
               <q-select v-model="viewmodel.currentMaterialStyle"
@@ -157,6 +168,7 @@
 
 <script>
 import RhinoApp from '../RhinoApp'
+import DisplayMode from '../DisplayMode'
 
 export default {
   created () {
@@ -169,12 +181,21 @@ export default {
       fileDrawerVisible: true,
       viewDrawerVisible: false,
       viewmodel: vm,
-      drawers: { FILE: 1, LAYER: 2, VIEW: 3 }
+      drawers: { FILE: 1, LAYER: 2, VIEW: 3 },
+      backgroundModes: DisplayMode.backgroundModes,
+      currentDisplayModeName: vm.displayMode.name
     }
   },
   methods: {
     RhApp () {
       return RhinoApp
+    },
+    displayModeNames () {
+      let names = []
+      DisplayMode.defaultModes().forEach((mode) => {
+        names.push(mode.name)
+      })
+      return names
     },
     toggleDrawer (drawer) {
       this.fileDrawerVisible = (drawer === this.drawers.FILE) ? !this.fileDrawerVisible : false

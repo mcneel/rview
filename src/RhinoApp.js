@@ -3,6 +3,7 @@ import FileObj from './FileObj.js'
 import FileDraco from './FileDraco.js'
 import FilePly from './FilePly.js'
 import SceneUtilities from './SceneUtilities.js'
+import DisplayMode from './DisplayMode.js'
 
 let _rhino3dm = null
 let _cachedDoc = null
@@ -14,19 +15,12 @@ let _viewmodel = {
   layers: [],
   perspectiveCamera: true,
   onChangeCamera: function () {},
-  gridVisible: true,
-  lightColor: 'rgb(240,240,240)',
-  currentBackgroundStyle: 'Single Color',
-  backgroundOptions: ['Single Color', '2 Color Gradient'], // , 'Bridge2',
-  // 'MilkyWay', 'Park2', 'Park3Med', 'pisa', 'skyboxsun25deg',
-  // 'SwedishRoyalCastle'],
-  backgroundColor: 'rgb(190,190,190)',
-  backgroundGradientTop: 'rgb(54,109,168)',
-  backgroundGradientBottom: 'rgb(165,165,165)',
   currentMaterialStyle: 'Basic',
   materialOptions: ['Basic', 'PBR: Carbon Fiber', 'PBR: Chipped Paint Metal',
-    'PBR: Scuffed Plastic', 'PBR: Streaked Metal']
+    'PBR: Scuffed Plastic', 'PBR: Streaked Metal'],
+  displayMode: null
 }
+
 let _model = {
   rhinoDoc: null,
   three: {
@@ -36,7 +30,8 @@ let _model = {
   },
   threeObjectsOnLayer: {},
   threeGrid: null,
-  cameraLight: null
+  cameraLight: null,
+  displayModes: null
 }
 
 function addToDictionary (node, chunks, layer) {
@@ -71,6 +66,8 @@ function createNodes (dictionary) {
 
 let RhinoApp = {
   init (rh3dm, startwait, endwait) {
+    _model.displayModes = DisplayMode.defaultModes()
+    this.setActiveDisplayMode('Shaded', false)
     if (_rhino3dm == null) {
       let rhino3dmPromise = rh3dm()
       console.log('start loading rhino3dm')
@@ -100,21 +97,39 @@ let RhinoApp = {
       if (objects != null) {
         objects.forEach((obj) => {
           obj.visible = layer.visible
+          if (obj.visible && obj.type === 'Mesh') {
+            obj.visible = _viewmodel.displayMode.showSurfaceMeshes
+          }
+          if (obj.visible && obj.userData['surfaceWires']) {
+            obj.visible = _viewmodel.displayMode.showSurfaceWires
+          }
         })
       }
     })
     if (_model.threeGrid) {
-      _model.threeGrid.visible = _viewmodel.gridVisible
+      _model.threeGrid.visible = _viewmodel.displayMode.showGrid
+    }
+  },
+  setActiveDisplayMode (name, performRegen = true) {
+    for (let i = 0; i < _model.displayModes.length; i++) {
+      if (_model.displayModes[i].name === name) {
+        _viewmodel.displayMode = _model.displayModes[i]
+        break
+      }
+    }
+    if (performRegen) {
+      this.regen()
     }
   },
   updateColors () {
-    _model.cameraLight.color = new THREE.Color(_viewmodel.lightColor)
-    if (_viewmodel.currentBackgroundStyle === _viewmodel.backgroundOptions[0]) {
-      _model.three.setBackground(_model.three.background, _viewmodel.backgroundColor)
-    } else if (_viewmodel.currentBackgroundStyle === _viewmodel.backgroundOptions[1]) {
-      _model.three.setBackground(_model.three.background, _viewmodel.backgroundGradientTop, _viewmodel.backgroundGradientBottom)
+    const dm = _viewmodel.displayMode
+    _model.cameraLight.color = new THREE.Color(dm.lightColor)
+    if (dm.backgroundStyle === DisplayMode.backgroundModes[0]) {
+      _model.three.setBackground(_model.three.background, dm.backgroundColor)
+    } else if (dm.backgroundStyle === DisplayMode.backgroundModes[1]) {
+      _model.three.setBackground(_model.three.background, dm.backgroundGradientTop, dm.backgroundGradientBottom)
     } else {
-      _model.three.setBackground(_model.three.background, null, null, _viewmodel.currentBackgroundStyle)
+      _model.three.setBackground(_model.three.background, null, null, dm.backgroundStyle)
     }
   },
   updateMaterial () {
@@ -126,18 +141,31 @@ let RhinoApp = {
       this.applyMaterial(null)
     }
   },
+  regen () {
+    this.updateVisibility()
+    this.updateColors()
+    this.updateMaterial()
+  },
   applyMaterial (material) {
     _viewmodel.layers.forEach((layer) => {
       let objects = _model.threeObjectsOnLayer[layer.label]
       if (objects != null) {
         objects.forEach((obj) => {
           if (obj.type === 'Mesh') {
+            if (obj.material) {
+              obj.material.dispose()
+              obj.material = null
+            }
             if (material == null) {
               let diffuse = obj.userData['diffuse']
               obj.material = new THREE.MeshPhongMaterial({
                 color: diffuse,
                 side: THREE.DoubleSide
               })
+              if (_viewmodel.displayMode.transparency) {
+                obj.material.opacity = _viewmodel.displayMode.transparency
+                obj.material.transparent = true
+              }
             } else {
               obj.material = material
             }
@@ -198,7 +226,7 @@ let RhinoApp = {
     }
 
     _activeDocEventWatchers.forEach((ew) => { ew() })
-    this.updateMaterial()
+    this.regen()
   },
   getActiveModel () {
     return _model

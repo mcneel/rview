@@ -139,6 +139,28 @@ let SceneUtilities = {
     points.setAttribute('position', new THREE.BufferAttribute(verts, 3))
     return points
   },
+  meshWiresToThreejs (mesh, color) {
+    let edges = mesh.topologyEdges()
+    let edgeCount = edges.count
+    let verts = new Float32Array(edgeCount * 2 * 3)
+    for (let i = 0; i < edgeCount; i++) {
+      let line = edges.edgeLine(i)
+      verts[i * 6] = line.from[0]
+      verts[i * 6 + 1] = line.from[1]
+      verts[i * 6 + 2] = line.from[2]
+      verts[i * 6 + 3] = line.to[0]
+      verts[i * 6 + 4] = line.to[1]
+      verts[i * 6 + 5] = line.to[2]
+    }
+    edges.delete()
+    let points = new THREE.BufferGeometry()
+    points.setAttribute('position', new THREE.BufferAttribute(verts, 3))
+    let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
+    let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
+    let wires = new THREE.LineSegments(points, wireMaterial)
+    wires.userData['surfaceWires'] = true
+    return wires
+  },
   meshToThreejs (mesh, diffuse) {
     let textureCoords = mesh.textureCoordinates()
     if (textureCoords.count === 0) {
@@ -151,12 +173,12 @@ let SceneUtilities = {
 
     let loader = new THREE.BufferGeometryLoader()
     var geometry = loader.parse(mesh.toThreejsJSON())
-    if (diffuse.r === 0 && diffuse.g === 0 && diffuse.b === 0) {
-      diffuse.r = 255
-      diffuse.g = 255
-      diffuse.b = 255
-    }
     let diffusecolor = new THREE.Color(diffuse.r / 255.0, diffuse.g / 255.0, diffuse.b / 255.0)
+    if (diffuse.r === 0 && diffuse.g === 0 && diffuse.b === 0) {
+      diffusecolor.r = 1
+      diffusecolor.g = 1
+      diffusecolor.b = 1
+    }
     let material = new THREE.MeshPhongMaterial({
       color: diffusecolor,
       side: THREE.DoubleSide
@@ -217,12 +239,26 @@ let SceneUtilities = {
             face.delete()
           }
           faces.delete()
+          let wires = new THREE.Group()
+          wires.userData['surfaceWires'] = true
+          let edges = geometry.edges()
+          for (let edgeIndex = 0; edgeIndex < edges.count; edgeIndex++) {
+            let edge = edges.get(edgeIndex)
+            let points = this.curveToBufferGeometry(edge, 32)
+            let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
+            let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
+            let polyline = new THREE.Line(points, wireMaterial)
+            wires.add(polyline)
+          }
+          objectsToAdd.push([wires, geometry.getBoundingBox()])
         }
         break
       case rhino3dm.ObjectType.Mesh:
         {
           let threeMesh = this.meshToThreejs(geometry, color)
           objectsToAdd.push([threeMesh, geometry.getBoundingBox()])
+          let wires = this.meshWiresToThreejs(geometry, color)
+          objectsToAdd.push([wires, geometry.getBoundingBox()])
         }
         break
       case rhino3dm.ObjectType.Light:
@@ -261,7 +297,18 @@ let SceneUtilities = {
         }
         break
       case rhino3dm.ObjectType.TextDot:
-        console.warn('TODO: Implement dot')
+        console.log('TODO: Implement dots')
+        // let dotDiv = document.createElement('div')
+        // dotDiv.style.marginTop = '-1em'
+        // dotDiv.style.color = '#FFF'
+        // dotDiv.style.fontFamily = 'sans-serif'
+        // dotDiv.style.padding = '2px'
+        // dotDiv.style.background = 'rgba(0,0,0,.6)'
+        // dotDiv.textContent = geometry.text
+        // let dot = new CSS2DObject(dotDiv)
+        // let location = geometry.point
+        // dot.position.set(location[0], location[1], location[2])
+        // objectsToAdd.push([dot, null])
         break
       case rhino3dm.ObjectType.Hatch:
         console.warn('TODO: Implement hatch')
