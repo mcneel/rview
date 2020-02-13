@@ -44,11 +44,15 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import RhinoApp from '../RhinoApp.js'
 import SceneUtilities from '../SceneUtilities.js'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js'
 
 let _pipeline = {
   renderer: null,
   camera: null,
   controls: null,
+  effectComposer: null,
+  ssaoPass: null,
   initialize: function () {
     if (this.renderer != null) {
       return
@@ -113,15 +117,33 @@ let _pipeline = {
     this.camera.updateProjectionMatrix()
     this.controls.target.set(target[0], target[1], target[2])
     viewport.delete()
+  },
+  enableSSAO (on) {
+    if (this.effectComposer) {
+      this.effectComposer.dispose()
+      this.effectComposer = null
+    }
+    if (on) {
+      this.effectComposer = new EffectComposer(this.renderer)
+      let model = RhinoApp.getActiveModel()
+      let canvas = document.getElementById('canvasParent')
+      this.ssaoPass = new SSAOPass(model.three.middleground, this.camera, canvas.clientWidth, canvas.clientHeight)
+      this.ssaoPass.kernelRadius = 16
+      // this.ssaoPass.output = SSAOPass.OUTPUT.SSAO
+      this.effectComposer.addPass(this.ssaoPass)
+    }
   }
 }
 
 let animate = function (windowResize = false) {
-  if (windowResize) {
+  if (windowResize || _pipeline.effectComposer) {
     let canvas = document.getElementById('canvasParent')
     _pipeline.camera.aspect = canvas.clientWidth / canvas.clientHeight
     _pipeline.camera.updateProjectionMatrix()
     _pipeline.renderer.setSize(canvas.clientWidth, canvas.clientHeight)
+    if (_pipeline.effectComposer) {
+      _pipeline.effectComposer.setSize(canvas.clientWidth, canvas.clientHeight)
+    }
   }
   requestAnimationFrame(animate)
   _pipeline.controls.update()
@@ -130,7 +152,12 @@ let animate = function (windowResize = false) {
   _pipeline.renderer.sortObjects = false
   _pipeline.renderer.render(model.three.background, _pipeline.camera)
   _pipeline.renderer.sortObjects = true
-  _pipeline.renderer.render(model.three.middleground, _pipeline.camera)
+
+  if (_pipeline.effectComposer) {
+    _pipeline.effectComposer.render()
+  } else {
+    _pipeline.renderer.render(model.three.middleground, _pipeline.camera)
+  }
 }
 
 function setBackground (scene, color1, color2 = null, environment = null) {
@@ -229,6 +256,11 @@ function onActiveDocChanged () {
   animate()
 }
 
+function onDisplayModeChanged () {
+  let useSSAO = RhinoApp.viewModel().displayMode.name === 'Arctic'
+  _pipeline.enableSSAO(useSSAO)
+}
+
 export default {
   data () {
     let vm = RhinoApp.viewModel()
@@ -245,6 +277,7 @@ export default {
   },
   created () {
     RhinoApp.addActiveDocChangedEventWatcher(onActiveDocChanged)
+    RhinoApp.addDisplayModeChangedEventWatcher(onDisplayModeChanged)
     this.viewmodel.onChangeCamera = this.updateCameraProjection
   },
   mounted () {
