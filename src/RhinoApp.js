@@ -8,6 +8,7 @@ import DisplayMode from './DisplayMode.js'
 let _rhino3dm = null
 let _cachedDoc = null
 let _activeDocEventWatchers = []
+let _displayModeChangedEventWatchers = []
 let _viewmodel = {
   docExists: false,
   filename: 'rview WIP',
@@ -120,6 +121,7 @@ let RhinoApp = {
     if (performRegen) {
       this.regen()
     }
+    _displayModeChangedEventWatchers.forEach((ew) => { ew() })
   },
   updateColors () {
     const dm = _viewmodel.displayMode
@@ -233,6 +235,9 @@ let RhinoApp = {
   },
   addActiveDocChangedEventWatcher (eventWatcher) {
     _activeDocEventWatchers.push(eventWatcher)
+  },
+  addDisplayModeChangedEventWatcher (eventWatcher) {
+    _displayModeChangedEventWatchers.push(eventWatcher)
   },
   disposeMiddleground () {
     if (_model.three.middleground) {
