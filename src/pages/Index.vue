@@ -120,16 +120,18 @@ let _pipeline = {
   },
   enableSSAO (on) {
     if (this.effectComposer) {
-      this.effectComposer.dispose()
-      this.effectComposer = null
+      this.effectComposer.passes[0].enabled = on
+      return
     }
     if (on) {
       this.effectComposer = new EffectComposer(this.renderer)
       let model = RhinoApp.getActiveModel()
       let canvas = document.getElementById('canvasParent')
       this.ssaoPass = new SSAOPass(model.three.middleground, this.camera, canvas.clientWidth, canvas.clientHeight)
-      this.ssaoPass.kernelRadius = 16
-      // this.ssaoPass.output = SSAOPass.OUTPUT.SSAO
+      this.ssaoPass.kernelRadius = 18
+      this.ssaoPass.minDistance = 0.002
+      this.ssaoPass.maxDistance = 0.2
+      this.ssaoPass.output = SSAOPass.OUTPUT.SSAO
       this.effectComposer.addPass(this.ssaoPass)
     }
   }
@@ -153,7 +155,7 @@ let animate = function (windowResize = false) {
   _pipeline.renderer.render(model.three.background, _pipeline.camera)
   _pipeline.renderer.sortObjects = true
 
-  if (_pipeline.effectComposer) {
+  if (_pipeline.effectComposer && _pipeline.effectComposer.passes[0].enabled) {
     _pipeline.effectComposer.render()
   } else {
     _pipeline.renderer.render(model.three.middleground, _pipeline.camera)
