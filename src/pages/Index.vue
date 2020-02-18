@@ -98,7 +98,7 @@ let _pipeline = {
       RhinoApp.getActiveModel().three.middleground.remove(this.camera)
       let fr = viewport.getFrustum()
       if (RhinoApp.viewModel().perspectiveCamera) {
-        this.camera = new THREE.PerspectiveCamera(30, size.x / size.y, 1, 1000)
+        this.camera = new THREE.PerspectiveCamera(30, size.x / size.y, fr.near, fr.far)
       } else {
         this.camera = new THREE.OrthographicCamera(fr.left, fr.right, fr.top, fr.bottom, fr.near, fr.far)
         this.camera.up.set(viewport.cameraUp[0], viewport.cameraUp[1], viewport.cameraUp[2])
