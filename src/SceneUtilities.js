@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import RhinoApp from './RhinoApp.js'
+import GlslGrid from './GlslGrid.js'
 
 function curveToPoints (curve, pointLimit) {
   let rhino3dm = RhinoApp.getRhino3dm()
@@ -74,11 +75,7 @@ let SceneUtilities = {
         minorLines.push(new THREE.Vector3(xMax, y, 0))
       }
     }
-    let majorMaterial = new THREE.LineBasicMaterial({
-      color: new THREE.Color(129 / 255, 134 / 255, 140 / 255),
-      depthTest: false,
-      depthWrite: false
-    })
+    let majorMaterial = GlslGrid.material(new THREE.Color(129 / 255, 134 / 255, 140 / 255))
     let positions = new Float32Array(majorLines.length * 3)
     for (let i = 0; i < majorLines.length; i++) {
       positions[i * 3] = majorLines[i].x
@@ -89,11 +86,7 @@ let SceneUtilities = {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     let major = new THREE.LineSegments(geometry, majorMaterial)  // eslint-disable-line
 
-    let minorMaterial = new THREE.LineBasicMaterial({
-      color: new THREE.Color(147 / 255, 153 / 255, 160 / 255),
-      depthTest: false,
-      depthWrite: false
-    })
+    let minorMaterial = GlslGrid.material(new THREE.Color(147 / 255, 153 / 255, 160 / 255))
     positions = new Float32Array(minorLines.length * 3)
     for (let i = 0; i < minorLines.length; i++) {
       positions[i * 3] = minorLines[i].x
@@ -109,21 +102,13 @@ let SceneUtilities = {
     positions = new Float32Array([0, 0, 0, xMax, 0, 0])
     geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    let xMaterial = new THREE.LineBasicMaterial({
-      color: new THREE.Color(150 / 255, 75 / 255, 75 / 255),
-      depthTest: false,
-      depthWrite: false
-    })
+    let xMaterial = GlslGrid.material(new THREE.Color(150 / 255, 75 / 255, 75 / 255))
     grid.add(new THREE.LineSegments(geometry, xMaterial))
 
     positions = new Float32Array([0, 0, 0, 0, yMax, 0])
     geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    let yMaterial = new THREE.LineBasicMaterial({
-      color: new THREE.Color(75 / 255, 150 / 255, 75 / 255),
-      depthTest: false,
-      depthWrite: false
-    })
+    let yMaterial = GlslGrid.material(new THREE.Color(75 / 255, 150 / 255, 75 / 255))
     grid.add(new THREE.LineSegments(geometry, yMaterial))
     return grid
   },
