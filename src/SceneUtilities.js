@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import RhinoApp from './RhinoApp.js'
-import GlslGrid from './GlslGrid.js'
+// import GlslGrid from './GlslGrid.js'
+import GlslLineList from './GlslLineList.js'
 
 function curveToPoints (curve, pointLimit) {
   let rhino3dm = RhinoApp.getRhino3dm()
@@ -75,41 +76,25 @@ let SceneUtilities = {
         minorLines.push(new THREE.Vector3(xMax, y, 0))
       }
     }
-    let majorMaterial = GlslGrid.material(new THREE.Color(129 / 255, 134 / 255, 140 / 255))
-    let positions = new Float32Array(majorLines.length * 3)
-    for (let i = 0; i < majorLines.length; i++) {
-      positions[i * 3] = majorLines[i].x
-      positions[i * 3 + 1] = majorLines[i].y
-      positions[i * 3 + 2] = majorLines[i].z
-    }
-    let geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    let major = new THREE.LineSegments(geometry, majorMaterial)  // eslint-disable-line
 
-    let minorMaterial = GlslGrid.material(new THREE.Color(147 / 255, 153 / 255, 160 / 255))
-    positions = new Float32Array(minorLines.length * 3)
-    for (let i = 0; i < minorLines.length; i++) {
-      positions[i * 3] = minorLines[i].x
-      positions[i * 3 + 1] = minorLines[i].y
-      positions[i * 3 + 2] = minorLines[i].z
-    }
-    geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    let minor = new THREE.LineSegments(geometry, minorMaterial) // eslint-disable-line
-    grid.add(minor)
-    grid.add(major)
+    grid.add(GlslLineList.createThreeObjectFromLines(minorLines,
+      new THREE.Color(147 / 255, 153 / 255, 160 / 255),
+      1.0))
 
-    positions = new Float32Array([0, 0, 0, xMax, 0, 0])
-    geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    let xMaterial = GlslGrid.material(new THREE.Color(150 / 255, 75 / 255, 75 / 255))
-    grid.add(new THREE.LineSegments(geometry, xMaterial))
+    grid.add(GlslLineList.createThreeObjectFromLines(majorLines,
+      new THREE.Color(129 / 255, 134 / 255, 140 / 255),
+      1.0))
 
-    positions = new Float32Array([0, 0, 0, 0, yMax, 0])
-    geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    let yMaterial = GlslGrid.material(new THREE.Color(75 / 255, 150 / 255, 75 / 255))
-    grid.add(new THREE.LineSegments(geometry, yMaterial))
+    grid.add(GlslLineList.createThreeObjectFromLines(
+      [new THREE.Vector3(0, 0, 0), new THREE.Vector3(xMax, 0, 0)],
+      new THREE.Color(150 / 255, 75 / 255, 75 / 255),
+      2.0))
+
+    grid.add(GlslLineList.createThreeObjectFromLines(
+      [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, yMax, 0)],
+      new THREE.Color(75 / 255, 150 / 255, 75 / 255),
+      2.0))
+
     return grid
   },
   curveToBufferGeometry (curve, pointLimit) {
@@ -337,7 +322,8 @@ let SceneUtilities = {
       material.map = texture
       apply(material)
     })
-  }
+  },
+  viewportSize: new THREE.Vector2(0, 0)
 }
 
 export default SceneUtilities

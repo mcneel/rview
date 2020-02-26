@@ -138,8 +138,10 @@ let _pipeline = {
 }
 
 let animate = function (windowResize = false) {
+  let canvas = document.getElementById('canvasParent')
+  let viewportWidth = canvas.clientWidth
+  let viewportHeight = canvas.clientHeight
   if (windowResize || _pipeline.effectComposer) {
-    let canvas = document.getElementById('canvasParent')
     _pipeline.camera.aspect = canvas.clientWidth / canvas.clientHeight
     _pipeline.camera.updateProjectionMatrix()
     _pipeline.renderer.setSize(canvas.clientWidth, canvas.clientHeight)
@@ -149,6 +151,8 @@ let animate = function (windowResize = false) {
   }
   requestAnimationFrame(animate)
   _pipeline.controls.update()
+  SceneUtilities.viewportSize.width = viewportWidth
+  SceneUtilities.viewportSize.height = viewportHeight
   let model = RhinoApp.getActiveModel()
   _pipeline.renderer.autoClear = false
   _pipeline.renderer.sortObjects = false
