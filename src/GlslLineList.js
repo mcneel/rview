@@ -234,6 +234,7 @@ class GlslLineList {
     return linelist.createThreeObject()
   }
   constructor () {
+    this._canBeLineSegments = true
     this._starts = []
     this._ends = []
     this._thicknesses = []
@@ -242,6 +243,12 @@ class GlslLineList {
     this._indices = []
   }
   addLine (from, to, color, thickness) {
+    if (this._canBeLineSegments) {
+      if (thickness !== 1.0 ||
+         (this._colors.length > 0 && !this._colors[0].equals(color))) {
+        this._canBeLineSegments = false
+      }
+    }
     this._starts = this._starts.concat([from, to, to, from])
     this._ends = this._ends.concat([to, from, from, to])
     this._sides = this._sides.concat([1, -1, 1, -1])

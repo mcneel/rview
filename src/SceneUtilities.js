@@ -85,15 +85,16 @@ let SceneUtilities = {
       new THREE.Color(129 / 255, 134 / 255, 140 / 255),
       1.0))
 
-    grid.add(GlslLineList.createThreeObjectFromLines(
-      [new THREE.Vector3(0, 0, 0), new THREE.Vector3(xMax, 0, 0)],
+    let lineList = new GlslLineList()
+    lineList.addLine(new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(xMax, 0, 0),
       new THREE.Color(150 / 255, 75 / 255, 75 / 255),
-      2.0))
-
-    grid.add(GlslLineList.createThreeObjectFromLines(
-      [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, yMax, 0)],
+      2.0)
+    lineList.addLine(new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, yMax, 0),
       new THREE.Color(75 / 255, 150 / 255, 75 / 255),
-      2.0))
+      2.0)
+    grid.add(lineList.createThreeObject())
 
     return grid
   },
