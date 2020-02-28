@@ -153,7 +153,7 @@ let RhinoApp = {
       let objects = _model.threeObjectsOnLayer[layer.label]
       if (objects != null) {
         objects.forEach((obj) => {
-          if (obj.type === 'Mesh') {
+          if (obj.type === 'Mesh' && obj.userData['diffuse']) {
             if (obj.material) {
               obj.material.dispose()
               obj.material = null

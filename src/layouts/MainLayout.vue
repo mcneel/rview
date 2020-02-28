@@ -203,7 +203,7 @@ export default {
       this.viewDrawerVisible = (drawer === this.drawers.VIEW) ? !this.viewDrawerVisible : false
     },
     openSample () {
-      fetch('statics/hello_mesh.3dm').then((res) => {
+      fetch('statics/rhino_logo.3dm').then((res) => {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
           RhinoApp.openFile('RhinoLogo.3dm', new Uint8Array(buffer))

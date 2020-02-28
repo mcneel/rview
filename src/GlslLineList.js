@@ -55,6 +55,10 @@ void main() {
   vec4 clip = projectionMatrix * modelViewPosition;
 #ifdef NO_CLIP_Z
   clip.z = 0.0;
+#else
+  float z = clip_position.z / clip_position.w;
+  z -= 0.001;
+  clip_position.z = z * clip_position.w;
 #endif
   gl_Position = clip;
 }
@@ -247,6 +251,10 @@ void main()
   clip_position.y = s2c.y*clip_position.w;
 #ifdef NO_CLIP_Z
   clip_position.z = 0.0;
+#else
+  float z = clip_position.z / clip_position.w;
+  z -= 0.001;
+  clip_position.z = z * clip_position.w;
 #endif
   // clip_position.w = 1.0;
   gl_Position = clip_position;
@@ -302,6 +310,12 @@ class GlslLineList {
     this._depthTesting = depthTesting
   }
   addLine (from, to, color, thickness) {
+    if (Array.isArray(from)) {
+      from = new THREE.Vector3(from[0], from[1], from[2])
+    }
+    if (Array.isArray(to)) {
+      to = new THREE.Vector3(to[0], to[1], to[2])
+    }
     if (this._canBeLineSegments) {
       if (thickness !== 1.0 ||
          (this._colors.length > 0 && !this._colors[0].equals(color))) {

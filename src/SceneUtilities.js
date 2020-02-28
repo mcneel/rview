@@ -100,18 +100,6 @@ let SceneUtilities = {
 
     return grid
   },
-  curveToBufferGeometry (curve, pointLimit) {
-    let pointArray = curveToPoints(curve, pointLimit)
-    let points = new THREE.BufferGeometry()
-    let verts = new Float32Array(pointArray.length * 3)
-    for (let i = 0; i < pointArray.length; i++) {
-      verts[i * 3] = pointArray[i][0]
-      verts[i * 3 + 1] = pointArray[i][1]
-      verts[i * 3 + 2] = pointArray[i][2]
-    }
-    points.setAttribute('position', new THREE.BufferAttribute(verts, 3))
-    return points
-  },
   meshWiresToThreejs (mesh, color) {
     let edges = mesh.topologyEdges()
     let edgeCount = edges.count
@@ -188,11 +176,11 @@ let SceneUtilities = {
         break
       case rhino3dm.ObjectType.Curve:
         {
-          let points = this.curveToBufferGeometry(geometry, 32)
+          let points = curveToPoints(geometry, 32)
+          let linelist = new GlslLineList(true)
           let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
-          let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
-          let polyline = new THREE.Line(points, wireMaterial)
-          objectsToAdd.push([polyline, geometry.getBoundingBox()])
+          linelist.addPolyline(points, threecolor, 1.5)
+          objectsToAdd.push([linelist.createThreeObject(), geometry.getBoundingBox()])
         }
         break
       case rhino3dm.ObjectType.Surface:
@@ -217,11 +205,11 @@ let SceneUtilities = {
           let edges = geometry.edges()
           for (let edgeIndex = 0; edgeIndex < edges.count; edgeIndex++) {
             let edge = edges.get(edgeIndex)
-            let points = this.curveToBufferGeometry(edge, 32)
+            let points = curveToPoints(edge, 32)
+            let linelist = new GlslLineList(true)
             let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
-            let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
-            let polyline = new THREE.Line(points, wireMaterial)
-            wires.add(polyline)
+            linelist.addPolyline(points, threecolor, 1.5)
+            wires.add(linelist.createThreeObject())
           }
           objectsToAdd.push([wires, geometry.getBoundingBox()])
         }
