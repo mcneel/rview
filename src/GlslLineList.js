@@ -11,6 +11,10 @@ function createBufferGeometry (lineList) {
     positions[i * 3 + 2] = lineList._starts[i].z
   }
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  if (lineList._canBeLineSegments) {
+    // we're done for single pixel thickness, single color wires
+    return geometry
+  }
 
   let ends = new Float32Array(lineList._ends.length * 3)
   for (let i = 0; i < lineList._ends.length; i++) {
@@ -44,8 +48,44 @@ function createBufferGeometry (lineList) {
   return geometry
 }
 
-function getMaterial () {
-  const vs = `
+function getLinesMaterial (noclip, pixelColor) {
+  let vs = `
+void main() {
+  vec4 modelViewPosition = modelViewMatrix * vec4(position, 1.0);
+  vec4 clip = projectionMatrix * modelViewPosition;
+#ifdef NO_CLIP_Z
+  clip.z = 0.0;
+#endif
+  gl_Position = clip;
+}
+`
+  let fs = `
+uniform vec3 color;
+void main() {
+  gl_FragColor = vec4(color.rgb, 1.0);
+}
+`
+  if (noclip) {
+    vs = `#define NO_CLIP_Z
+    ` + vs
+    fs = `#define NO_CLIP_Z
+    ` + fs
+  }
+
+  let mat = new THREE.ShaderMaterial({
+    uniforms: {
+      color: { type: 'vec3', value: pixelColor }
+    },
+    vertexShader: vs,
+    fragmentShader: fs,
+    depthWrite: !noclip,
+    depthTest: !noclip
+  })
+  return mat
+}
+
+function getMeshLineMaterial (noclip) {
+  let vs = `
 uniform vec2 viewport_size;
 
 attribute vec3 end;
@@ -179,13 +219,15 @@ void main()
   fs_color = color;
 
   vec4 clip_position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  clip_position.z = 0.0;
   vec4 clip_next = projectionMatrix * modelViewMatrix * vec4(end, 1.0);
+#ifdef NO_CLIP_Z
+  clip_position.z = 0.0;
   clip_next.z = 0.0;
+#endif
   vec3 start_side = ClippingSideFlag(clip_position);
   vec3 end_side = ClippingSideFlag(clip_next);
   float t0 = 0.0;
-  float t1 = 0.0;
+  float t1 = 1.0;
   SnipToFrustum(clip_position, clip_next, start_side, end_side, t0, t1);
   vec3 world_dir = end - position;
   vec3 clipped_start = position + world_dir * t0;
@@ -201,39 +243,55 @@ void main()
   vec2 offset_screen_point = screen0 + (dir * 0.5 * thickness);
   vec2 screen = RotatePoint90(offset_screen_point, side>0.0, screen0);
   vec2 s2c = ScreenToClip(screen);
-  clip_position.x = s2c.x;//*clip_position.w;
-  clip_position.y = s2c.y;//*clip_position.w;
+  clip_position.x = s2c.x*clip_position.w;
+  clip_position.y = s2c.y*clip_position.w;
+#ifdef NO_CLIP_Z
   clip_position.z = 0.0;
-  clip_position.w = 1.0;
+#endif
+  // clip_position.w = 1.0;
   gl_Position = clip_position;
 }
 `
-  const fs = `
+  let fs = `
 varying vec4 fs_color;
 
 void main() {
   gl_FragColor = fs_color;
 }
 `
+  if (noclip) {
+    vs = `#define NO_CLIP_Z
+    ` + vs
+    fs = `#define NO_CLIP_Z
+    ` + fs
+  }
+
   let material = new THREE.ShaderMaterial({
     uniforms: {
       viewport_size: { type: 'vec2', value: SceneUtilities.viewportSize }
     },
     vertexShader: vs,
     fragmentShader: fs,
-    depthWrite: false,
-    depthTest: false
+    depthWrite: !noclip,
+    depthTest: !noclip
   })
   return material
 }
 
+function getMaterial (lineList) {
+  let noclip = !lineList._depthTesting
+  return lineList._canBeLineSegments
+    ? getLinesMaterial(noclip, lineList._colors)
+    : getMeshLineMaterial(noclip)
+}
+
 class GlslLineList {
-  static createThreeObjectFromLines (lines, color, thickness) {
-    let linelist = new GlslLineList()
+  static createThreeObjectFromLines (lines, color, thickness, depthTest) {
+    let linelist = new GlslLineList(depthTest)
     linelist.addLines(lines, color, thickness)
     return linelist.createThreeObject()
   }
-  constructor () {
+  constructor (depthTesting) {
     this._canBeLineSegments = true
     this._starts = []
     this._ends = []
@@ -241,13 +299,33 @@ class GlslLineList {
     this._sides = []
     this._colors = []
     this._indices = []
+    this._depthTesting = depthTesting
   }
   addLine (from, to, color, thickness) {
     if (this._canBeLineSegments) {
       if (thickness !== 1.0 ||
          (this._colors.length > 0 && !this._colors[0].equals(color))) {
+        let temp = new GlslLineList()
+        temp._canBeLineSegments = false
+        for (let i = 0; i < this._starts.length; i += 2) {
+          let start = this._starts[i]
+          let end = this._starts[i + 1]
+          temp.addLine(start, end, this._colors, this._thicknesses)
+        }
         this._canBeLineSegments = false
+        this._starts = temp._starts
+        this._ends = temp._ends
+        this._thicknesses = temp._thicknesses
+        this._sides = temp._sides
+        this._colors = temp._colors
+        this._indices = temp._indices
       }
+    }
+    if (this._canBeLineSegments) {
+      this._starts = this._starts.concat([from, to])
+      this._colors = color
+      this._thicknesses = 1.0
+      return
     }
     this._starts = this._starts.concat([from, to, to, from])
     this._ends = this._ends.concat([to, from, from, to])
@@ -274,9 +352,10 @@ class GlslLineList {
   }
   createThreeObject () {
     let geometry = createBufferGeometry(this)
-    let material = getMaterial()
-    let mesh = new THREE.Mesh(geometry, material)
-    return mesh
+    let material = getMaterial(this)
+    return this._canBeLineSegments
+      ? new THREE.LineSegments(geometry, material)
+      : new THREE.Mesh(geometry, material)
   }
 }
 
