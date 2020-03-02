@@ -44,6 +44,15 @@ function curveToPoints (curve, pointLimit) {
   return rc
 }
 
+function getMaterialId (doc, attributes) {
+  let materials = doc.materials()
+  let material = materials.findFromAttributes(attributes)
+  let id = material.id
+  material.delete()
+  materials.delete()
+  return id
+}
+
 let SceneUtilities = {
   createGrid (gridSpacing = 1.0, gridLineCount = 70, gridThickFrequency = 5) {
     const xMin = -gridLineCount * gridSpacing
@@ -122,7 +131,7 @@ let SceneUtilities = {
     wires.userData['surfaceWires'] = true
     return wires
   },
-  meshToThreejs (mesh, diffuse) {
+  meshToThreejs (mesh, diffuse, materialId) {
     let textureCoords = mesh.textureCoordinates()
     if (textureCoords.count === 0) {
       let rhino3dm = RhinoApp.getRhino3dm()
@@ -146,11 +155,13 @@ let SceneUtilities = {
     })
     let meshObject = new THREE.Mesh(geometry, material)
     meshObject.userData['diffuse'] = diffusecolor
+    meshObject.userData['materialId'] = materialId
     return meshObject
   },
-  createThreeGeometry (geometry, color, doc) {
+  createThreeGeometry (geometry, attributes, doc) {
     let rhino3dm = RhinoApp.getRhino3dm()
     let objectsToAdd = []
+    let color = attributes.drawColor(doc)
     const objectType = geometry.objectType
     switch (objectType) {
       case rhino3dm.ObjectType.Point:
@@ -188,12 +199,13 @@ let SceneUtilities = {
         break
       case rhino3dm.ObjectType.Brep:
         {
+          let materialId = getMaterialId(doc, attributes)
           let faces = geometry.faces()
           for (let faceIndex = 0; faceIndex < faces.count; faceIndex++) {
             let face = faces.get(faceIndex)
             let mesh = face.getMesh(rhino3dm.MeshType.Any)
             if (mesh) {
-              let threeMesh = this.meshToThreejs(mesh, color)
+              let threeMesh = this.meshToThreejs(mesh, color, materialId)
               objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
               mesh.delete()
             }
@@ -216,7 +228,8 @@ let SceneUtilities = {
         break
       case rhino3dm.ObjectType.Mesh:
         {
-          let threeMesh = this.meshToThreejs(geometry, color)
+          let materialId = getMaterialId(doc, attributes)
+          let threeMesh = this.meshToThreejs(geometry, color, materialId)
           objectsToAdd.push([threeMesh, geometry.getBoundingBox()])
           let wires = this.meshWiresToThreejs(geometry, color)
           objectsToAdd.push([wires, geometry.getBoundingBox()])
@@ -247,8 +260,7 @@ let SceneUtilities = {
             let modelObject = objectTable.findId(id)
             let childGeometry = modelObject.geometry()
             let attr = modelObject.attributes()
-            let childColor = attr.drawColor(doc)
-            let children = this.createThreeGeometry(childGeometry, childColor, doc)
+            let children = this.createThreeGeometry(childGeometry, attr, doc)
             children.forEach((child) => {
               group.add(child[0])
             })
@@ -284,7 +296,8 @@ let SceneUtilities = {
         {
           let mesh = geometry.getMesh(rhino3dm.MeshType.Any)
           if (mesh) {
-            let threeMesh = this.meshToThreejs(mesh, color)
+            let materialId = getMaterialId(doc, attributes)
+            let threeMesh = this.meshToThreejs(mesh, color, materialId)
             objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
             mesh.delete()
           }
@@ -295,24 +308,50 @@ let SceneUtilities = {
     }
     return objectsToAdd
   },
-  createPBRMaterial (name, apply) {
-    let material = new THREE.MeshPhysicalMaterial()
-    material.metalness = 0.75
-    material.roughness = 0.15
-    material.normalScale.x = 1.0
-    material.normalScale.y = 1.0
-    // material.envMap = scene.background
+  createThreeMaterial (rhinoMaterial, doc) {
+    let material = null
+    let rhino3dm = RhinoApp.getRhino3dm()
 
-    let tl = new THREE.TextureLoader()
-    tl.setPath('statics/materials/PBR/' + name + '/')
-    material.aoMmap = tl.load(name + '_ao.png')
-    material.normalMap = tl.load(name + '_normal.png')
-    material.metalnessMap = tl.load(name + '_metallic.png')
+    let textureLoader = new THREE.TextureLoader()
+    let pbr = rhinoMaterial.physicallyBased()
+    if (pbr.supported) {
+      let textureTypes = [rhino3dm.TextureType.PBR_BaseColor,
+        rhino3dm.TextureType.PBR_Metallic,
+        rhino3dm.TextureType.PBR_Roughness]
+      textureTypes.forEach((t) => {
+        let texture = rhinoMaterial.getTexture(t)
+        if (texture) {
+          let image = doc.getEmbeddedFileAsBase64(texture.fileName)
+          if (image) {
+            if (!material) { material = new THREE.MeshPhysicalMaterial() }
+            if (t === rhino3dm.TextureType.PBR_BaseColor) {
+              material.map = textureLoader.load('data:image/png;base64,' + image)
+            }
+            if (t === rhino3dm.TextureType.PBR_Metallic) {
+              material.metalnessMap = textureLoader.load('data:image/png;base64,' + image)
+            }
+            if (t === rhino3dm.TextureType.PBR_Roughness) {
+              material.roughnessMap = textureLoader.load('data:image/png;base64,' + image)
+            }
+          }
+          texture.delete()
+        }
+      })
+    }
+    if (material) {
+      let ctl = new THREE.CubeTextureLoader()
+      ctl.setPath('statics/cubemaps/' + 'skyboxsun25deg' + '/')
+      let texture = ctl.load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'])
+      material.envMap = texture
 
-    tl.load(name + '_base.png', (texture) => {
-      material.map = texture
-      apply(material)
-    })
+      // T:\shared\pbr\Panorama.exr
+      material.metalness = pbr.metallic
+      material.roughness = pbr.roughness
+      material.normalScale.x = 1.0
+      material.normalScale.y = 1.0
+    }
+    pbr.delete()
+    return material
   },
   viewportSize: new THREE.Vector2(0, 0)
 }

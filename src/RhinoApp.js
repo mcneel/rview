@@ -118,6 +118,9 @@ let RhinoApp = {
         break
       }
     }
+
+    this.applyMaterial2(name === 'Rendered')
+
     if (performRegen) {
       this.regen()
     }
@@ -135,6 +138,7 @@ let RhinoApp = {
     }
   },
   updateMaterial () {
+    /*
     if (_viewmodel.currentMaterialStyle !== _viewmodel.materialOptions[0]) {
       let name = _viewmodel.currentMaterialStyle.substr('PBR: '.length).toLowerCase()
       name = name.replace(/ /g, '-')
@@ -142,6 +146,7 @@ let RhinoApp = {
     } else {
       this.applyMaterial(null)
     }
+    */
   },
   regen () {
     this.updateVisibility()
@@ -170,6 +175,41 @@ let RhinoApp = {
               }
             } else {
               obj.material = material
+            }
+          }
+        })
+      }
+    })
+  },
+  applyMaterial2 (useRenderMaterial) {
+    _viewmodel.layers.forEach((layer) => {
+      let objects = _model.threeObjectsOnLayer[layer.label]
+      if (objects != null) {
+        objects.forEach((obj) => {
+          if (obj.type === 'Mesh' && obj.userData['diffuse']) {
+            if (obj.material) {
+              obj.material.dispose()
+              obj.material = null
+            }
+
+            if (useRenderMaterial) {
+              let id = obj.userData['materialId']
+              let materials = _model.rhinoDoc.materials()
+              let material = materials.findId(id)
+              obj.material = SceneUtilities.createThreeMaterial(material, _model.rhinoDoc)
+              material.delete()
+              materials.delete()
+            }
+            if (obj.material == null) {
+              let diffuse = obj.userData['diffuse']
+              obj.material = new THREE.MeshPhongMaterial({
+                color: diffuse,
+                side: THREE.DoubleSide
+              })
+              if (_viewmodel.displayMode.transparency) {
+                obj.material.opacity = _viewmodel.displayMode.transparency
+                obj.material.transparent = true
+              }
             }
           }
         })

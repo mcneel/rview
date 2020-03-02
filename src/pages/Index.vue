@@ -233,8 +233,7 @@ function onActiveDocChanged () {
     if (!model.threeObjectsOnLayer[rootLayer]) {
       model.threeObjectsOnLayer[rootLayer] = []
     }
-    let color = attr.drawColor(doc)
-    let objectsToAdd = SceneUtilities.createThreeGeometry(geometry, color, doc)
+    let objectsToAdd = SceneUtilities.createThreeGeometry(geometry, attr, doc)
 
     objectsToAdd.forEach((obj) => {
       let threeGeometry = obj[0]
