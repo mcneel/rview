@@ -23,12 +23,12 @@
         </q-fab-action>
         <q-fab-action v-if="viewmodel.perspectiveCamera"
           color="primary"
-          icon="img:statics/icons/3D.svg"
+          icon="img:statics/icons/2D.svg"
           @click="setProjection(false)">
         </q-fab-action>
         <q-fab-action v-if="!viewmodel.perspectiveCamera"
           color="primary"
-          icon="img:statics/icons/2D.svg"
+          icon="img:statics/icons/3D.svg"
           @click="setProjection(true)">
         </q-fab-action>
       </q-fab>
