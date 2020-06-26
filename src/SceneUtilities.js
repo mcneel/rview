@@ -45,12 +45,16 @@ function curveToPoints (curve, pointLimit) {
 }
 
 function getMaterialId (doc, attributes) {
-  let materials = doc.materials()
-  let material = materials.findFromAttributes(attributes)
-  let id = material.id
-  material.delete()
-  materials.delete()
-  return id
+  try {
+    let materials = doc.materials()
+    let material = materials.findFromAttributes(attributes)
+    let id = material.id
+    material.delete()
+    materials.delete()
+    return id
+  } catch (error) {
+    return 0
+  }
 }
 
 let SceneUtilities = {
