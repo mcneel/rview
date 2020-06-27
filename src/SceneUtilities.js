@@ -47,8 +47,11 @@ function curveToPoints (curve, pointLimit) {
 function getMaterialId (doc, attributes) {
   let materials = doc.materials()
   let material = materials.findFromAttributes(attributes)
-  let id = material.id
-  material.delete()
+  let id = 0
+  if (material) {
+    id = material.id
+    material.delete()
+  }
   materials.delete()
   return id
 }
@@ -140,7 +143,6 @@ let SceneUtilities = {
       mesh.setTextureCoordinates(mapping, null, false)
     }
     textureCoords.delete()
-
     let loader = new THREE.BufferGeometryLoader()
     var geometry = loader.parse(mesh.toThreejsJSON())
     let diffusecolor = new THREE.Color(diffuse.r / 255.0, diffuse.g / 255.0, diffuse.b / 255.0)
