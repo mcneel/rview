@@ -45,16 +45,15 @@ function curveToPoints (curve, pointLimit) {
 }
 
 function getMaterialId (doc, attributes) {
-  try {
-    let materials = doc.materials()
-    let material = materials.findFromAttributes(attributes)
-    let id = material.id
+  let materials = doc.materials()
+  let material = materials.findFromAttributes(attributes)
+  let id = 0
+  if (material) {
+    id = material.id
     material.delete()
-    materials.delete()
-    return id
-  } catch (error) {
-    return 0
   }
+  materials.delete()
+  return id
 }
 
 let SceneUtilities = {
@@ -144,39 +143,8 @@ let SceneUtilities = {
       mesh.setTextureCoordinates(mapping, null, false)
     }
     textureCoords.delete()
-    // let loader = new THREE.BufferGeometryLoader()
-    // var geometry = loader.parse(mesh.toThreejsJSON())
-    var geometry = new THREE.BufferGeometry()
-    var vertices = mesh.vertices()
-    var vertexbuffer = new Float32Array(3 * vertices.count)
-    for (let i = 0; i < vertices.count; i++) {
-      let pt = vertices.get(i)
-      vertexbuffer[i * 3] = pt[0]
-      vertexbuffer[i * 3 + 1] = pt[1]
-      vertexbuffer[i * 3 + 2] = pt[2]
-    }
-    geometry.setAttribute('position', new THREE.BufferAttribute(vertexbuffer, 3))
-    var indices = []
-    var faces = mesh.faces()
-    for (let i = 0; i < faces.count; i++) {
-      var face = faces.get(i)
-      indices.push(face[0], face[1], face[2])
-      if (face[2] !== face[3]) {
-        indices.push(face[2], face[3], face[0])
-      }
-    }
-    geometry.setIndex(indices)
-    var normals = mesh.normals()
-    var normalBuffer = new Float32Array(3 * normals.count)
-    for (let i = 0; i < normals.count; i++) {
-      let pt = normals.get(i)
-      normalBuffer[i * 3] = pt[0]
-      normalBuffer[i * 3 + 1] = pt[1]
-      normalBuffer[i * 3 + 2] = pt[1]
-    }
-    geometry.setAttribute('normal', new THREE.BufferAttribute(normalBuffer, 3))
-    geometry.computeVertexNormals()
-
+    let loader = new THREE.BufferGeometryLoader()
+    var geometry = loader.parse(mesh.toThreejsJSON())
     let diffusecolor = new THREE.Color(diffuse.r / 255.0, diffuse.g / 255.0, diffuse.b / 255.0)
     if (diffuse.r === 0 && diffuse.g === 0 && diffuse.b === 0) {
       diffusecolor.r = 1
