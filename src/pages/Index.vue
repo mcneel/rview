@@ -1,7 +1,7 @@
 <template>
   <q-page id='canvasParent' class="flex flex-center">
     <q-card flat v-if="!viewmodel.docExists">
-      <q-img alt="rview" src="statics/logo.png"/>
+      <q-img alt="rview" src="logo.png"/>
       <q-card-section>
         <div class="text-h6">rview WIP</div>
       </q-card-section>
@@ -23,12 +23,12 @@
         </q-fab-action>
         <q-fab-action v-if="viewmodel.perspectiveCamera"
           color="primary"
-          icon="img:statics/icons/2D.svg"
+          icon="img:icons/2D.svg"
           @click="setProjection(false)">
         </q-fab-action>
         <q-fab-action v-if="!viewmodel.perspectiveCamera"
           color="primary"
-          icon="img:statics/icons/3D.svg"
+          icon="img:icons/3D.svg"
           @click="setProjection(true)">
         </q-fab-action>
       </q-fab>
@@ -184,7 +184,7 @@ function setBackground (scene, color1, color2 = null, environment = null) {
   }
   if (environment) {
     let ctl = new THREE.CubeTextureLoader()
-    ctl.setPath('statics/cubemaps/' + environment + '/')
+    ctl.setPath('cubemaps/' + environment + '/')
     let texture = ctl.load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'])
     // let matrix = new THREE.Matrix4()
     // matrix = matrix.makeRotationY(Math.PI / 2.0)

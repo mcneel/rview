@@ -342,7 +342,7 @@ let SceneUtilities = {
     }
     if (material) {
       let ctl = new THREE.CubeTextureLoader()
-      ctl.setPath('statics/cubemaps/' + 'skyboxsun25deg' + '/')
+      ctl.setPath('cubemaps/' + 'skyboxsun25deg' + '/')
       let texture = ctl.load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'])
       material.envMap = texture
 

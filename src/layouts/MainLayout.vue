@@ -34,7 +34,7 @@
         <q-item clickable v-ripple @click="openSample()">
           <q-item-section>Open Sample</q-item-section>
           <q-item-section avatar>
-            <q-icon name="img:statics/logo.png"/>
+            <q-icon name="img:logo.png"/>
           </q-item-section>
         </q-item>
         <q-item clickable v-ripple @click="openFile()">
@@ -203,7 +203,7 @@ export default {
       this.viewDrawerVisible = (drawer === this.drawers.VIEW) ? !this.viewDrawerVisible : false
     },
     openSample () {
-      fetch('statics/rhino_logo.3dm').then((res) => {
+      fetch('rhino_logo.3dm').then((res) => {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
           RhinoApp.openFile('RhinoLogo.3dm', new Uint8Array(buffer))
