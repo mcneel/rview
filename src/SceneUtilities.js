@@ -261,10 +261,8 @@ let SceneUtilities = {
           objectIds.forEach((id) => {
             let modelObject = objectTable.findId(id)
             let childGeometry = modelObject.geometry()
-            console.log('child geom:', childGeometry)
             let attr = modelObject.attributes()
             let children = this.createThreeGeometry(childGeometry, attr, doc)
-            console.log('children:', children)
             children.forEach((child) => {
               let childBbox = child[1]
               childBbox.transform(geometry.xform)
