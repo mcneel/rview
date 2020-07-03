@@ -247,12 +247,12 @@ let SceneUtilities = {
         {
           let parentId = geometry.parentIdefId
           let xf = geometry.xform.toFloatArray(true)
+          let bbox = null
           let group = new THREE.Group()
           let matrix = new THREE.Matrix4()
           matrix.set(xf[0], xf[1], xf[2], xf[3], xf[4], xf[5], xf[6], xf[7],
             xf[8], xf[9], xf[10], xf[11], xf[12], xf[13], xf[14], xf[15])
           group.applyMatrix(matrix)
-          objectsToAdd.push([group, null])
 
           let idefTable = doc.instanceDefinitions()
           let objectTable = doc.objects()
@@ -264,9 +264,17 @@ let SceneUtilities = {
             let attr = modelObject.attributes()
             let children = this.createThreeGeometry(childGeometry, attr, doc)
             children.forEach((child) => {
+              let childBbox = child[1]
+              childBbox.transform(geometry.xform)
+              if (bbox == null) {
+                bbox = childBbox
+              } else {
+                bbox = rhino3dm.BoundingBox.union(bbox, childBbox)
+              }
               group.add(child[0])
             })
           })
+          objectsToAdd.push([group, bbox])
           objectTable.delete()
           idefTable.delete()
         }
