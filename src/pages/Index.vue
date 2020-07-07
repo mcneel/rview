@@ -175,7 +175,6 @@ let animate = function (windowResize = false) {
     _pipeline.effectComposer.render()
   } else {
     _pipeline.renderer.render(model.three.middleground, _pipeline.camera)
-    _pipeline.labelRenderer.render(model.three.foreground, _pipeline.camera)
   }
 }
 
