@@ -27,6 +27,7 @@ let _model = {
   three: {
     background: null,
     middleground: null,
+    foreground: null,
     setBackground: null
   },
   threeObjectsOnLayer: {},
@@ -242,6 +243,7 @@ let RhinoApp = {
       _model.rhinoDoc.delete()
     }
     this.disposeMiddleground()
+    this.disposeForeground()
     _model.threeObjectsOnLayer = {}
     _model.rhinoDoc = doc
     _viewmodel.docExists = (doc != null)
@@ -283,6 +285,12 @@ let RhinoApp = {
     if (_model.three.middleground) {
       _model.three.middleground.dispose()
       _model.three.middleground = null
+    }
+  },
+  disposeForeground () {
+    if (_model.three.foreground) {
+      _model.three.foreground.dispose()
+      _model.three.foreground = null
     }
   },
   visibleObjectsBoundingBox () {
