@@ -42,6 +42,7 @@
 <script>
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import RhinoApp from '../RhinoApp.js'
 import SceneUtilities from '../SceneUtilities.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
@@ -49,6 +50,7 @@ import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js'
 
 let _pipeline = {
   renderer: null,
+  labelRenderer: null,
   camera: null,
   controls: null,
   effectComposer: null,
@@ -65,6 +67,12 @@ let _pipeline = {
     // canvas.insertBefore(canvas.children[0], _pipeline.renderer.domElement)
     canvas.appendChild(this.renderer.domElement)
     window.addEventListener('resize', () => animate(true), false)
+    this.labelRenderer = new CSS2DRenderer()
+    this.labelRenderer.setSize(canvas.clientWidth, window.innerHeight - 50) // not sure why canvas.clientHeight isn't returning the right value, 50 is height of navigation bar
+    this.labelRenderer.domElement.style.position = 'absolute'
+    this.labelRenderer.domElement.style.top = 0
+    this.labelRenderer.domElement.style.pointerEvents = 'none'
+    canvas.appendChild(this.labelRenderer.domElement)
 
     this.camera = new THREE.PerspectiveCamera(30, canvas.clientWidth / canvas.clientHeight, 1, 1000)
     this.camera.position.z = 40
@@ -158,6 +166,7 @@ let animate = function (windowResize = false) {
   _pipeline.renderer.sortObjects = false
   _pipeline.renderer.render(model.three.background, _pipeline.camera)
   _pipeline.renderer.sortObjects = true
+  _pipeline.labelRenderer.render(model.three.middleground, _pipeline.camera)
 
   if (_pipeline.effectComposer && _pipeline.effectComposer.passes[0].enabled) {
     _pipeline.effectComposer.render()

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import RhinoApp from './RhinoApp.js'
 // import GlslGrid from './GlslGrid.js'
 import GlslLineList from './GlslLineList.js'
@@ -280,18 +281,20 @@ let SceneUtilities = {
         }
         break
       case rhino3dm.ObjectType.TextDot:
-        console.log('TODO: Implement dots')
-        // let dotDiv = document.createElement('div')
-        // dotDiv.style.marginTop = '-1em'
-        // dotDiv.style.color = '#FFF'
-        // dotDiv.style.fontFamily = 'sans-serif'
-        // dotDiv.style.padding = '2px'
-        // dotDiv.style.background = 'rgba(0,0,0,.6)'
-        // dotDiv.textContent = geometry.text
-        // let dot = new CSS2DObject(dotDiv)
-        // let location = geometry.point
-        // dot.position.set(location[0], location[1], location[2])
-        // objectsToAdd.push([dot, null])
+        let dotDiv = document.createElement('div')
+        dotDiv.style.marginTop = '-1em'
+        dotDiv.style.color = '#FFF'
+        dotDiv.style.fontFamily = 'sans-serif'
+        dotDiv.style.padding = '2px'
+        dotDiv.style.paddingRight = '5px'
+        dotDiv.style.paddingLeft = '5px'
+        dotDiv.style.borderRadius = '5px'
+        dotDiv.style.background = 'rgba(0,0,0,.6)'
+        dotDiv.textContent = geometry.text
+        let dot = new CSS2DObject(dotDiv)
+        let location = geometry.point
+        dot.position.set(location[0], location[1], location[2])
+        objectsToAdd.push([dot, null])
         break
       case rhino3dm.ObjectType.Hatch:
         console.warn('TODO: Implement hatch')
