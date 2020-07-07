@@ -264,13 +264,13 @@ function onActiveDocChanged () {
       switch (threeGeometry.type) {
         case 'Object3D':
           model.three.foreground.add(threeGeometry)
+          model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
           break
         default:
           model.three.middleground.add(threeGeometry)
           model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
           break
       }
-
       // let box = new THREE.BoxHelper(threeGeometry, 0x000000)
       // model.three.middleground.add(box)
       // model.threeObjectsOnLayer[rootLayer].push(box)
