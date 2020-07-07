@@ -262,7 +262,7 @@ function onActiveDocChanged () {
         bbox.delete()
       }
       switch (threeGeometry.type) {
-        case 'Object3D':
+        case 'Object3D': // handling CSS2D lables type
           model.three.foreground.add(threeGeometry)
           model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
           break
