@@ -67,8 +67,10 @@ let _pipeline = {
     // canvas.insertBefore(canvas.children[0], _pipeline.renderer.domElement)
     canvas.appendChild(this.renderer.domElement)
     window.addEventListener('resize', () => animate(true), false)
+
     this.labelRenderer = new CSS2DRenderer()
-    this.labelRenderer.setSize(canvas.clientWidth, window.innerHeight - 50) // not sure why canvas.clientHeight isn't returning the right value, 50 is height of navigation bar
+    this.labelRenderer.domElement.id = 'labels'
+    this.labelRenderer.setSize(canvas.clientWidth, canvas.clientHeight)
     this.labelRenderer.domElement.style.position = 'absolute'
     this.labelRenderer.domElement.style.top = 0
     this.labelRenderer.domElement.style.pointerEvents = 'none'
@@ -153,6 +155,7 @@ let animate = function (windowResize = false) {
     _pipeline.camera.aspect = canvas.clientWidth / canvas.clientHeight
     _pipeline.camera.updateProjectionMatrix()
     _pipeline.renderer.setSize(canvas.clientWidth, canvas.clientHeight)
+    _pipeline.labelRenderer.setSize(canvas.clientWidth, canvas.clientHeight)
     if (_pipeline.effectComposer) {
       _pipeline.effectComposer.setSize(canvas.clientWidth, canvas.clientHeight)
     }
@@ -166,12 +169,13 @@ let animate = function (windowResize = false) {
   _pipeline.renderer.sortObjects = false
   _pipeline.renderer.render(model.three.background, _pipeline.camera)
   _pipeline.renderer.sortObjects = true
-  _pipeline.labelRenderer.render(model.three.middleground, _pipeline.camera)
+  _pipeline.labelRenderer.render(model.three.foreground, _pipeline.camera)
 
   if (_pipeline.effectComposer && _pipeline.effectComposer.passes[0].enabled) {
     _pipeline.effectComposer.render()
   } else {
     _pipeline.renderer.render(model.three.middleground, _pipeline.camera)
+    _pipeline.labelRenderer.render(model.three.foreground, _pipeline.camera)
   }
 }
 
@@ -206,8 +210,12 @@ function setBackground (scene, color1, color2 = null, environment = null) {
 function createScene () {
   _pipeline.initialize()
   RhinoApp.disposeMiddleground()
+  RhinoApp.disposeForeground()
+  let labelDiv = document.getElementById('labels')
+  labelDiv.innerHTML = ''
   let model = RhinoApp.getActiveModel()
   model.three.middleground = new THREE.Scene()
+  model.three.foreground = new THREE.Scene()
 
   if (model.three.background == null) {
     model.three.background = new THREE.Scene()
@@ -253,8 +261,16 @@ function onActiveDocChanged () {
         threeGeometry.boundingBox = new THREE.Box3(minPoint, maxPoint)
         bbox.delete()
       }
-      model.three.middleground.add(threeGeometry)
-      model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
+      switch (threeGeometry.type) {
+        case 'Object3D':
+          model.three.foreground.add(threeGeometry)
+          break
+        default:
+          model.three.middleground.add(threeGeometry)
+          model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
+          break
+      }
+
       // let box = new THREE.BoxHelper(threeGeometry, 0x000000)
       // model.three.middleground.add(box)
       // model.threeObjectsOnLayer[rootLayer].push(box)
