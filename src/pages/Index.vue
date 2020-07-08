@@ -53,6 +53,7 @@ let _pipeline = {
   controls: null,
   effectComposer: null,
   ssaoPass: null,
+  sceneBbox: null,
   initialize: function () {
     if (this.renderer != null) {
       return
@@ -81,8 +82,12 @@ let _pipeline = {
     viewport.screenPort = [0, 0, size.x, size.y]
 
     let b = RhinoApp.visibleObjectsBoundingBox()
+
     let bbox = new rhino3dm.BoundingBox(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z)
     let target = bbox.center
+    _pipeline.sceneBbox = bbox.clone()
+    _pipeline.sceneBbox.sceneDepth = Math.max(...bbox.diagonal)
+    console.log(_pipeline.sceneBbox.sceneDepth, _pipeline.sceneBbox.diagonal)
 
     let bboxWidth = bbox.max[0] - bbox.min[0]
     let bboxHeight = bbox.max[1] - bbox.min[1]
@@ -138,10 +143,24 @@ let _pipeline = {
   }
 }
 
+let updateFrustum = function () {
+  let vector = new THREE.Vector3(0, 0, -1)
+  vector.applyQuaternion(_pipeline.camera.quaternion)
+  let pl = new THREE.Plane(vector, 0)
+  pl.translate(_pipeline.camera.position)
+  let sceneCenter = _pipeline.sceneBbox.center
+  let distance = pl.distanceToPoint(new THREE.Vector3(sceneCenter[0], sceneCenter[1], sceneCenter[2]))
+  _pipeline.camera.near = distance - _pipeline.sceneBbox.sceneDepth / 2
+  _pipeline.camera.far = distance + _pipeline.sceneBbox.sceneDepth / 2
+}
+
 let animate = function (windowResize = false) {
   let canvas = document.getElementById('canvasParent')
   let viewportWidth = canvas.clientWidth
   let viewportHeight = canvas.clientHeight
+
+  updateFrustum()
+
   if (windowResize || _pipeline.effectComposer) {
     _pipeline.camera.aspect = canvas.clientWidth / canvas.clientHeight
     _pipeline.camera.updateProjectionMatrix()
@@ -251,7 +270,6 @@ function onActiveDocChanged () {
       // model.three.middleground.add(box)
       // model.threeObjectsOnLayer[rootLayer].push(box)
     })
-
     modelObject.delete()
     geometry.delete()
     attr.delete()
