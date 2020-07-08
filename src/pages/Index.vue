@@ -161,10 +161,8 @@ let updateFrustum = function () {
   let pl = new THREE.Plane(vector, 0)
   pl.translate(_pipeline.camera.position)
   let distances = _pipeline.sceneCorners.map(corner => { return pl.distanceToPoint(corner) })
-  let near = Math.min(...distances)
-  let far = Math.max(...distances)
-  _pipeline.camera.near = near
-  _pipeline.camera.far = far
+  _pipeline.camera.near = Math.min(...distances)
+  _pipeline.camera.far = Math.max(...distances)
 }
 
 let animate = function (windowResize = false) {
