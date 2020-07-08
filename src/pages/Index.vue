@@ -71,6 +71,7 @@ let _pipeline = {
     this.camera.position.z = 40
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.screenSpacePanning = true
+    this.controls.addEventListener('change', updateFrustum)
   },
   zoomExtents: function (createNewCamera) {
     let rhino3dm = RhinoApp.getRhino3dm()
@@ -82,11 +83,12 @@ let _pipeline = {
     viewport.screenPort = [0, 0, size.x, size.y]
 
     let b = RhinoApp.visibleObjectsBoundingBox()
+    console.log('b', b)
 
     let bbox = new rhino3dm.BoundingBox(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z)
     let target = bbox.center
 
-    _pipeline.sceneCorners = boxCorners(b) // Need it for updateFrustum, storing here to avoid having to calculate at each frame
+    _pipeline.bbox = { box: b, corners: boxCorners(b) }
 
     let bboxWidth = bbox.max[0] - bbox.min[0]
     let bboxHeight = bbox.max[1] - bbox.min[1]
@@ -160,8 +162,8 @@ let updateFrustum = function () {
   vector.applyQuaternion(_pipeline.camera.quaternion)
   let pl = new THREE.Plane(vector, 0)
   pl.translate(_pipeline.camera.position)
-  let distances = _pipeline.sceneCorners.map(corner => { return pl.distanceToPoint(corner) })
-  _pipeline.camera.near = Math.min(...distances)
+  let distances = _pipeline.bbox.corners.map(corner => { return pl.distanceToPoint(corner) })
+  _pipeline.camera.near = Math.max(0.1, Math.min(...distances))
   _pipeline.camera.far = Math.max(...distances)
 }
 
@@ -170,7 +172,7 @@ let animate = function (windowResize = false) {
   let viewportWidth = canvas.clientWidth
   let viewportHeight = canvas.clientHeight
 
-  updateFrustum()
+  // updateFrustum()
 
   if (windowResize || _pipeline.effectComposer) {
     _pipeline.camera.aspect = canvas.clientWidth / canvas.clientHeight
