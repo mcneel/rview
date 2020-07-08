@@ -85,9 +85,8 @@ let _pipeline = {
 
     let bbox = new rhino3dm.BoundingBox(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z)
     let target = bbox.center
-    _pipeline.sceneBbox = bbox.clone()
-    _pipeline.sceneBbox.sceneDepth = Math.max(...bbox.diagonal)
-    console.log(_pipeline.sceneBbox.sceneDepth, _pipeline.sceneBbox.diagonal)
+
+    _pipeline.sceneCorners = boxCorners(b) // Need it for updateFrustum, storing here to avoid having to calculate at each frame
 
     let bboxWidth = bbox.max[0] - bbox.min[0]
     let bboxHeight = bbox.max[1] - bbox.min[1]
@@ -143,15 +142,29 @@ let _pipeline = {
   }
 }
 
+let boxCorners = function (box) {
+  return [
+    new THREE.Vector3(box.min.x, box.min.y, box.min.z), // 000
+    new THREE.Vector3(box.min.x, box.min.y, box.max.z), // 001
+    new THREE.Vector3(box.min.x, box.max.y, box.min.z), // 010
+    new THREE.Vector3(box.min.x, box.max.y, box.max.z), // 011
+    new THREE.Vector3(box.max.x, box.min.y, box.min.z), // 100
+    new THREE.Vector3(box.max.x, box.min.y, box.max.z), // 101
+    new THREE.Vector3(box.max.x, box.max.y, box.min.z), // 110
+    new THREE.Vector3(box.max.x, box.max.y, box.max.z) // 111
+  ]
+}
+
 let updateFrustum = function () {
   let vector = new THREE.Vector3(0, 0, -1)
   vector.applyQuaternion(_pipeline.camera.quaternion)
   let pl = new THREE.Plane(vector, 0)
   pl.translate(_pipeline.camera.position)
-  let sceneCenter = _pipeline.sceneBbox.center
-  let distance = pl.distanceToPoint(new THREE.Vector3(sceneCenter[0], sceneCenter[1], sceneCenter[2]))
-  _pipeline.camera.near = distance - _pipeline.sceneBbox.sceneDepth / 2
-  _pipeline.camera.far = distance + _pipeline.sceneBbox.sceneDepth / 2
+  let distances = _pipeline.sceneCorners.map(corner => { return pl.distanceToPoint(corner) })
+  let near = Math.min(...distances)
+  let far = Math.max(...distances)
+  _pipeline.camera.near = near
+  _pipeline.camera.far = far
 }
 
 let animate = function (windowResize = false) {
