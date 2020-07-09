@@ -83,12 +83,8 @@ let _pipeline = {
     viewport.screenPort = [0, 0, size.x, size.y]
 
     let b = RhinoApp.visibleObjectsBoundingBox()
-    console.log('b', b)
-
     let bbox = new rhino3dm.BoundingBox(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z)
     let target = bbox.center
-
-    _pipeline.bbox = { box: b, corners: boxCorners(b) }
 
     let bboxWidth = bbox.max[0] - bbox.min[0]
     let bboxHeight = bbox.max[1] - bbox.min[1]
@@ -103,9 +99,8 @@ let _pipeline = {
     if (createNewCamera) {
       RhinoApp.getActiveModel().three.middleground.remove(this.camera)
       let fr = viewport.getFrustum()
-      let frMultiplier = 3
       if (RhinoApp.viewModel().perspectiveCamera) {
-        this.camera = new THREE.PerspectiveCamera(30, size.x / size.y, fr.near / frMultiplier, fr.far * frMultiplier)
+        this.camera = new THREE.PerspectiveCamera(30, size.x / size.y, fr.near, fr.far)
       } else {
         this.camera = new THREE.OrthographicCamera(fr.left, fr.right, fr.top, fr.bottom, fr.near, fr.far)
         this.camera.up.set(viewport.cameraUp[0], viewport.cameraUp[1], viewport.cameraUp[2])
@@ -158,21 +153,23 @@ let boxCorners = function (box) {
 }
 
 let updateFrustum = function () {
-  let vector = new THREE.Vector3(0, 0, -1)
-  vector.applyQuaternion(_pipeline.camera.quaternion)
-  let pl = new THREE.Plane(vector, 0)
-  pl.translate(_pipeline.camera.position)
-  let distances = _pipeline.bbox.corners.map(corner => { return pl.distanceToPoint(corner) })
-  _pipeline.camera.near = Math.max(0.1, Math.min(...distances))
-  _pipeline.camera.far = Math.max(...distances)
+  if (RhinoApp.viewModel().perspectiveCamera) {
+    let bbox = RhinoApp.visibleObjectsBoundingBox()
+    let corners = boxCorners(bbox)
+    let vector = new THREE.Vector3(0, 0, -1)
+    vector.applyQuaternion(_pipeline.camera.quaternion)
+    let pl = new THREE.Plane(vector, 0)
+    pl.translate(_pipeline.camera.position)
+    let distances = corners.map(corner => { return pl.distanceToPoint(corner) })
+    _pipeline.camera.near = Math.max(0.1, Math.min(...distances))
+    _pipeline.camera.far = Math.max(...distances)
+  }
 }
 
 let animate = function (windowResize = false) {
   let canvas = document.getElementById('canvasParent')
   let viewportWidth = canvas.clientWidth
   let viewportHeight = canvas.clientHeight
-
-  // updateFrustum()
 
   if (windowResize || _pipeline.effectComposer) {
     _pipeline.camera.aspect = canvas.clientWidth / canvas.clientHeight
