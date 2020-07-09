@@ -216,6 +216,9 @@ function createScene () {
   model.three.middleground = new THREE.Scene()
   model.three.foreground = new THREE.Scene()
 
+  model.clippingPlanes = []
+  _pipeline.renderer.clippingPlanes = model.clippingPlanes
+
   if (model.three.background == null) {
     model.three.background = new THREE.Scene()
     model.three.background.background = new THREE.Color(0.75, 0.75, 0.75)
@@ -260,10 +263,13 @@ function onActiveDocChanged () {
         threeGeometry.boundingBox = new THREE.Box3(minPoint, maxPoint)
         bbox.delete()
       }
-      switch (threeGeometry.type) {
-        case 'Object3D': // handling CSS2D lables type
+      switch (threeGeometry.constructor.name) {
+        case 'CSS2DObject': // handling CSS2D lables type
           model.three.foreground.add(threeGeometry)
           model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
+          break
+        case 'Plane': // handling clipping planes
+          model.clippingPlanes.push(threeGeometry)
           break
         default:
           model.three.middleground.add(threeGeometry)
@@ -283,6 +289,15 @@ function onActiveDocChanged () {
   RhinoApp.updateVisibility()
   _pipeline.zoomExtents(true)
   animate()
+}
+
+function onClippingChanged (isClipping) {
+  if (isClipping) {
+    let model = RhinoApp.getActiveModel()
+    _pipeline.renderer.clippingPlanes = model.clippingPlanes
+  } else {
+    _pipeline.renderer.clippingPlanes = []
+  }
 }
 
 function onDisplayModeChanged () {
@@ -307,6 +322,7 @@ export default {
   created () {
     RhinoApp.addActiveDocChangedEventWatcher(onActiveDocChanged)
     RhinoApp.addDisplayModeChangedEventWatcher(onDisplayModeChanged)
+    RhinoApp.addClippingChangedEventWatcher(onClippingChanged)
     this.viewmodel.onChangeCamera = this.updateCameraProjection
   },
   mounted () {
