@@ -304,7 +304,9 @@ let SceneUtilities = {
         console.warn('TODO: Implement SubD')
         break
       case rhino3dm.ObjectType.ClipPlane:
-        console.warn('TODO: Implement clipplane')
+        console.warn('TODO: Implementing clipplane in progress', geometry)
+        let clippingPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0)
+        objectsToAdd.push([clippingPlane, null])
         break
       case rhino3dm.ObjectType.Extrusion:
         {

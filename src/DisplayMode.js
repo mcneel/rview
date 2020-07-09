@@ -41,6 +41,7 @@ class Mode {
     this.lightColor = 'rgb(240,240,240)'
     this.showSurfaceWires = true
     this.showSurfaceMeshes = true
+    this.clipping = true
 
     this.defaultModes = () => {
       let modes = []

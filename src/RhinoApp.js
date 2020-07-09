@@ -9,6 +9,7 @@ let _rhino3dm = null
 let _cachedDoc = null
 let _activeDocEventWatchers = []
 let _displayModeChangedEventWatchers = []
+let _clippingChangedEventWatchers = []
 let _viewmodel = {
   docExists: false,
   filename: 'rview WIP',
@@ -127,6 +128,11 @@ let RhinoApp = {
     }
     _displayModeChangedEventWatchers.forEach((ew) => { ew() })
   },
+
+  setClippingMode () {
+    _clippingChangedEventWatchers.forEach((ew) => { ew(_viewmodel.displayMode.clipping) })
+  },
+
   updateColors () {
     const dm = _viewmodel.displayMode
     _model.cameraLight.color = new THREE.Color(dm.lightColor)
@@ -280,6 +286,9 @@ let RhinoApp = {
   },
   addDisplayModeChangedEventWatcher (eventWatcher) {
     _displayModeChangedEventWatchers.push(eventWatcher)
+  },
+  addClippingChangedEventWatcher (eventWatcher) {
+    _clippingChangedEventWatchers.push(eventWatcher)
   },
   disposeMiddleground () {
     if (_model.three.middleground) {
