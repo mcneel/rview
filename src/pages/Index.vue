@@ -55,6 +55,7 @@ let _pipeline = {
   controls: null,
   effectComposer: null,
   ssaoPass: null,
+  sceneBbox: null,
   initialize: function () {
     if (this.renderer != null) {
       return
@@ -80,6 +81,7 @@ let _pipeline = {
     this.camera.position.z = 40
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.screenSpacePanning = true
+    this.controls.addEventListener('change', updateFrustum)
   },
   zoomExtents: function (createNewCamera) {
     let rhino3dm = RhinoApp.getRhino3dm()
@@ -147,10 +149,38 @@ let _pipeline = {
   }
 }
 
+let boxCorners = function (box) {
+  return [
+    new THREE.Vector3(box.min.x, box.min.y, box.min.z), // 000
+    new THREE.Vector3(box.min.x, box.min.y, box.max.z), // 001
+    new THREE.Vector3(box.min.x, box.max.y, box.min.z), // 010
+    new THREE.Vector3(box.min.x, box.max.y, box.max.z), // 011
+    new THREE.Vector3(box.max.x, box.min.y, box.min.z), // 100
+    new THREE.Vector3(box.max.x, box.min.y, box.max.z), // 101
+    new THREE.Vector3(box.max.x, box.max.y, box.min.z), // 110
+    new THREE.Vector3(box.max.x, box.max.y, box.max.z) // 111
+  ]
+}
+
+let updateFrustum = function () {
+  if (RhinoApp.viewModel().perspectiveCamera) {
+    let bbox = RhinoApp.visibleObjectsBoundingBox()
+    let corners = boxCorners(bbox)
+    let vector = new THREE.Vector3(0, 0, -1)
+    vector.applyQuaternion(_pipeline.camera.quaternion)
+    let pl = new THREE.Plane(vector, 0)
+    pl.translate(_pipeline.camera.position)
+    let distances = corners.map(corner => { return pl.distanceToPoint(corner) })
+    _pipeline.camera.near = Math.max(0.1, Math.min(...distances))
+    _pipeline.camera.far = Math.max(...distances)
+  }
+}
+
 let animate = function (windowResize = false) {
   let canvas = document.getElementById('canvasParent')
   let viewportWidth = canvas.clientWidth
   let viewportHeight = canvas.clientHeight
+
   if (windowResize || _pipeline.effectComposer) {
     _pipeline.camera.aspect = canvas.clientWidth / canvas.clientHeight
     _pipeline.camera.updateProjectionMatrix()
@@ -280,7 +310,6 @@ function onActiveDocChanged () {
       // model.three.middleground.add(box)
       // model.threeObjectsOnLayer[rootLayer].push(box)
     })
-
     modelObject.delete()
     geometry.delete()
     attr.delete()
