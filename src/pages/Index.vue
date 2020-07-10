@@ -42,7 +42,7 @@
 <script>
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
+import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import RhinoApp from '../RhinoApp.js'
 import SceneUtilities from '../SceneUtilities.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
@@ -293,12 +293,12 @@ function onActiveDocChanged () {
         threeGeometry.boundingBox = new THREE.Box3(minPoint, maxPoint)
         bbox.delete()
       }
-      switch (threeGeometry.constructor.name) {
-        case 'CSS2DObject': // handling CSS2D lables type
+      switch (threeGeometry.constructor) {
+        case CSS2DObject: // handling CSS2D lables type
           model.three.foreground.add(threeGeometry)
           model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
           break
-        case 'Plane': // handling clipping planes
+        case THREE.Plane: // handling clipping planes
           model.clippingPlanes.push(threeGeometry)
           break
         default:
