@@ -372,10 +372,15 @@ export default {
   methods: {
     openURL (url) {
       fetch(url).then(async res => {
-        let buffer = await res.arrayBuffer()
-        let arr = new Uint8Array(buffer)
-        RhinoApp.openFile(url, arr)
-      })
+        console.log('res:', res)
+        if (res.status === 200) {
+          let buffer = await res.arrayBuffer()
+          let arr = new Uint8Array(buffer)
+          RhinoApp.openFile(url, arr)
+        } else {
+          alert(`Error retrieving resource.\n${res.status}`)
+        }
+      }).catch(e => alert(`Error:.\n${e}`))
     },
     updateCameraProjection () {
       _pipeline.zoomExtents(true)
