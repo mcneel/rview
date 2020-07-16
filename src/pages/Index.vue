@@ -372,7 +372,6 @@ export default {
   methods: {
     openURL (url) {
       fetch(url).then(async res => {
-        console.log('res:', res)
         if (res.status === 200) {
           let buffer = await res.arrayBuffer()
           let arr = new Uint8Array(buffer)
