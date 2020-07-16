@@ -231,15 +231,15 @@ let RhinoApp = {
 
     if (name.endsWith('.obj')) {
       let doc = FileObj.readFile(name, contents)
-      this.setActiveDoc(name, doc)
+      doc ? this.setActiveDoc(name, doc) : alert('Invalid document.')
     } else if (name.endsWith('.drc')) {
       FileDraco.readFile(name, contents)
     } else if (name.endsWith('.ply')) {
       let doc = FilePly.readFile(name, contents)
-      this.setActiveDoc(name, doc)
+      doc ? this.setActiveDoc(name, doc) : alert('Invalid document.')
     } else {
       let doc = _rhino3dm.File3dm.fromByteArray(contents)
-      this.setActiveDoc(name, doc)
+      doc ? this.setActiveDoc(name, doc) : alert('Invalid document.')
     }
   },
   setActiveDoc (name, doc) {
