@@ -8,6 +8,7 @@ function curveToPoints (curve, pointLimit) {
   let rhino3dm = RhinoApp.getRhino3dm()
   let pointCount = pointLimit
   let rc = []
+  let ts = []
 
   if (curve instanceof rhino3dm.LineCurve) {
     return [curve.pointAtStart, curve.pointAtEnd]
@@ -40,8 +41,21 @@ function curveToPoints (curve, pointLimit) {
   let divisions = pointCount - 1.0
   for (let j = 0; j < pointCount; j++) {
     let t = domain[0] + (j / divisions) * (domain[1] - domain[0])
-    rc.push(curve.pointAt(t))
+    if (t === domain[0] || t === domain[1]) {
+      ts.push(t)
+      continue
+    }
+    let tan = curve.tangentAt(t)
+    let tanVec = new THREE.Vector3(tan[0], tan[1], tan[2])
+    let prevTan = curve.tangentAt(ts.slice(-1)[0])
+    let prevTanVec = new THREE.Vector3(prevTan[0], prevTan[1], prevTan[2])
+
+    let angle = tanVec.angleTo(prevTanVec)
+    if (angle < 0.1) { continue }
+    ts.push(t)
   }
+
+  rc = ts.map(t => curve.pointAt(t))
   return rc
 }
 
@@ -190,7 +204,7 @@ let SceneUtilities = {
         break
       case rhino3dm.ObjectType.Curve:
         {
-          let points = curveToPoints(geometry, 32)
+          let points = curveToPoints(geometry, 100)
           let linelist = new GlslLineList(true)
           let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
           linelist.addPolyline(points, threecolor, 1.5)
@@ -220,7 +234,7 @@ let SceneUtilities = {
           let edges = geometry.edges()
           for (let edgeIndex = 0; edgeIndex < edges.count; edgeIndex++) {
             let edge = edges.get(edgeIndex)
-            let points = curveToPoints(edge, 32)
+            let points = curveToPoints(edge, 100)
             let linelist = new GlslLineList(true)
             let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
             linelist.addPolyline(points, threecolor, 1.5)
