@@ -12,11 +12,11 @@
   "dependencies": {
     "@quasar/extras": "^1.8.2",
     "core-js": "^3.0.0",
-    "quasar": "^1.12.8",
+    "quasar": "^1.12.12",
     "three": "^0.113.2"
   },
   "devDependencies": {
-    "@quasar/app": "^2.0.0",
+    "@quasar/app": "^2.0.6",
     "@vue/eslint-config-standard": "^4.0.0",
     "babel-eslint": "^10.0.1",
     "eslint": "^5.10.0",
