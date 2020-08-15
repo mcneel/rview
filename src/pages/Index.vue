@@ -41,203 +41,17 @@
 
 <script>
 import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
+import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import RhinoApp from '../RhinoApp.js'
 import SceneUtilities from '../SceneUtilities.js'
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
-import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js'
+import DisplayPipeline from '../DisplayPipeline'
 
-let _pipeline = {
-  renderer: null,
-  labelRenderer: null,
-  camera: null,
-  controls: null,
-  effectComposer: null,
-  ssaoPass: null,
-  sceneBbox: null,
-  initialize: function () {
-    if (this.renderer != null) {
-      return
-    }
-    THREE.Object3D.DefaultUp = new THREE.Vector3(0, 0, 1)
-    this.renderer = new THREE.WebGLRenderer({ antialias: true })
-    this.renderer.setPixelRatio(window.devicePixelRatio)
-    let canvas = document.getElementById('canvasParent')
-    this.renderer.setSize(canvas.clientWidth, canvas.clientHeight)
-    // canvas.insertBefore(canvas.children[0], _pipeline.renderer.domElement)
-    canvas.appendChild(this.renderer.domElement)
-    window.addEventListener('resize', () => animate(true), false)
-
-    this.labelRenderer = new CSS2DRenderer()
-    this.labelRenderer.domElement.id = 'labels'
-    this.labelRenderer.setSize(canvas.clientWidth, canvas.clientHeight)
-    this.labelRenderer.domElement.style.position = 'absolute'
-    this.labelRenderer.domElement.style.top = 0
-    this.labelRenderer.domElement.style.pointerEvents = 'none'
-    canvas.appendChild(this.labelRenderer.domElement)
-
-    this.camera = new THREE.PerspectiveCamera(30, canvas.clientWidth / canvas.clientHeight, 1, 1000)
-    this.camera.position.z = 40
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement)
-    this.controls.screenSpacePanning = true
-    this.controls.addEventListener('change', updateFrustum)
-  },
-  zoomExtents: function (createNewCamera) {
-    let rhino3dm = RhinoApp.getRhino3dm()
-    let viewport = RhinoApp.viewModel().perspectiveCamera
-      ? rhino3dm.ViewportInfo.defaultPerspective()
-      : rhino3dm.ViewportInfo.defaultTop()
-    let size = new THREE.Vector2(0, 0)
-    _pipeline.renderer.getSize(size)
-    viewport.screenPort = [0, 0, size.x, size.y]
-
-    let b = RhinoApp.visibleObjectsBoundingBox()
-    let bbox = new rhino3dm.BoundingBox(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z)
-    let target = bbox.center
-
-    let bboxWidth = bbox.max[0] - bbox.min[0]
-    let bboxHeight = bbox.max[1] - bbox.min[1]
-    let bboxDepth = bbox.max[2] - bbox.min[2]
-    bbox.inflate(bboxWidth * 0.2, bboxHeight * 0.2, bboxDepth * 0.2)
-    let width = bboxWidth
-    let height = width * size.y / size.x
-    viewport.setFrustum(-width / 2.0, width / 2.0, -height / 2.0, height / 2.0, 0.1, 1000)
-    viewport.extents(50.0 * Math.PI / 180.0, bbox)
-    bbox.delete()
-
-    if (createNewCamera) {
-      RhinoApp.getActiveModel().three.middleground.remove(this.camera)
-      let fr = viewport.getFrustum()
-      if (RhinoApp.viewModel().perspectiveCamera) {
-        this.camera = new THREE.PerspectiveCamera(30, size.x / size.y, fr.near, fr.far)
-      } else {
-        this.camera = new THREE.OrthographicCamera(fr.left, fr.right, fr.top, fr.bottom, fr.near, fr.far)
-        this.camera.up.set(viewport.cameraUp[0], viewport.cameraUp[1], viewport.cameraUp[2])
-      }
-      this.controls.object = this.camera
-
-      let light = new THREE.DirectionalLight(RhinoApp.viewModel().lightColor)
-      light.position.set(0, 0, 1)
-      RhinoApp.getActiveModel().cameraLight = light
-      this.camera.add(light)
-      RhinoApp.getActiveModel().three.middleground.add(this.camera)
-    }
-
-    let location = viewport.cameraLocation
-    this.camera.position.set(location[0], location[1], location[2])
-    this.camera.updateProjectionMatrix()
-    this.controls.target.set(target[0], target[1], target[2])
-    viewport.delete()
-  },
-  enableSSAO (on) {
-    if (this.effectComposer) {
-      this.effectComposer.passes[0].enabled = on
-      return
-    }
-    if (on) {
-      this.effectComposer = new EffectComposer(this.renderer)
-      let model = RhinoApp.getActiveModel()
-      let canvas = document.getElementById('canvasParent')
-      this.ssaoPass = new SSAOPass(model.three.middleground, this.camera, canvas.clientWidth, canvas.clientHeight)
-      this.ssaoPass.kernelRadius = 18
-      this.ssaoPass.minDistance = 0.002
-      this.ssaoPass.maxDistance = 0.2
-      this.ssaoPass.output = SSAOPass.OUTPUT.SSAO
-      this.effectComposer.addPass(this.ssaoPass)
-    }
-  }
-}
-
-let boxCorners = function (box) {
-  return [
-    new THREE.Vector3(box.min.x, box.min.y, box.min.z), // 000
-    new THREE.Vector3(box.min.x, box.min.y, box.max.z), // 001
-    new THREE.Vector3(box.min.x, box.max.y, box.min.z), // 010
-    new THREE.Vector3(box.min.x, box.max.y, box.max.z), // 011
-    new THREE.Vector3(box.max.x, box.min.y, box.min.z), // 100
-    new THREE.Vector3(box.max.x, box.min.y, box.max.z), // 101
-    new THREE.Vector3(box.max.x, box.max.y, box.min.z), // 110
-    new THREE.Vector3(box.max.x, box.max.y, box.max.z) // 111
-  ]
-}
-
-let updateFrustum = function () {
-  if (RhinoApp.viewModel().perspectiveCamera) {
-    let bbox = RhinoApp.visibleObjectsBoundingBox()
-    let corners = boxCorners(bbox)
-    let vector = new THREE.Vector3(0, 0, -1)
-    vector.applyQuaternion(_pipeline.camera.quaternion)
-    let pl = new THREE.Plane(vector, 0)
-    pl.translate(_pipeline.camera.position)
-    let distances = corners.map(corner => { return pl.distanceToPoint(corner) })
-    _pipeline.camera.near = Math.max(0.1, Math.min(...distances))
-    _pipeline.camera.far = Math.max(...distances)
-  }
-}
-
-let animate = function (windowResize = false) {
-  let canvas = document.getElementById('canvasParent')
-  let viewportWidth = canvas.clientWidth
-  let viewportHeight = canvas.clientHeight
-
-  if (windowResize || _pipeline.effectComposer) {
-    _pipeline.camera.aspect = canvas.clientWidth / canvas.clientHeight
-    _pipeline.camera.updateProjectionMatrix()
-    _pipeline.renderer.setSize(canvas.clientWidth, canvas.clientHeight)
-    _pipeline.labelRenderer.setSize(canvas.clientWidth, canvas.clientHeight)
-    if (_pipeline.effectComposer) {
-      _pipeline.effectComposer.setSize(canvas.clientWidth, canvas.clientHeight)
-    }
-  }
-  requestAnimationFrame(animate)
-  _pipeline.controls.update()
-  SceneUtilities.viewportSize.width = viewportWidth
-  SceneUtilities.viewportSize.height = viewportHeight
-  let model = RhinoApp.getActiveModel()
-  _pipeline.renderer.autoClear = false
-  _pipeline.renderer.sortObjects = false
-  _pipeline.renderer.render(model.three.background, _pipeline.camera)
-  _pipeline.renderer.sortObjects = true
-  _pipeline.labelRenderer.render(model.three.foreground, _pipeline.camera)
-
-  if (_pipeline.effectComposer && _pipeline.effectComposer.passes[0].enabled) {
-    _pipeline.effectComposer.render()
-  } else {
-    _pipeline.renderer.render(model.three.middleground, _pipeline.camera)
-  }
-}
-
-function setBackground (scene, color1, color2 = null, environment = null) {
-  if (!color2 && !environment) {
-    scene.background = new THREE.Color(color1)
-  }
-  if (color1 && color2) {
-    let canvas = document.createElement('canvas')
-    canvas.width = 128
-    canvas.height = 128
-    let context = canvas.getContext('2d')
-    let gradient = context.createLinearGradient(0, 0, 0, canvas.height)
-    gradient.addColorStop(1, color2)
-    gradient.addColorStop(0.1, color1)
-    context.fillStyle = gradient
-    context.fillRect(0, 0, canvas.width, canvas.height)
-    scene.background = new THREE.CanvasTexture(canvas)
-  }
-  if (environment) {
-    let ctl = new THREE.CubeTextureLoader()
-    ctl.setPath('cubemaps/' + environment + '/')
-    let texture = ctl.load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'])
-    // let matrix = new THREE.Matrix4()
-    // matrix = matrix.makeRotationY(Math.PI / 2.0)
-    // texture.matrix.setFromMatrix4(matrix)
-    scene.background = texture
-    animate(true)
-  }
-}
+let _dp = null
 
 function createScene () {
-  _pipeline.initialize()
+  if (_dp != null) return
+  _dp = new DisplayPipeline(window, document.getElementById('canvasParent'))
+
   RhinoApp.disposeMiddleground()
   RhinoApp.disposeForeground()
   let labelDiv = document.getElementById('labels')
@@ -247,7 +61,7 @@ function createScene () {
   model.three.foreground = new THREE.Scene()
 
   model.clippingPlanes = []
-  _pipeline.renderer.clippingPlanes = model.clippingPlanes
+  _dp.setClippingPlanes(model.clippingPlanes)
 
   if (model.three.background == null) {
     model.three.background = new THREE.Scene()
@@ -257,7 +71,7 @@ function createScene () {
     model.three.background.add(grid)
   }
 
-  model.three.setBackground = setBackground
+  model.three.setBackground = _dp.setBackground
 }
 
 function onActiveDocChanged () {
@@ -316,22 +130,23 @@ function onActiveDocChanged () {
   }
   objects.delete()
   RhinoApp.updateVisibility()
-  _pipeline.zoomExtents(true)
-  animate()
+  // _pipeline.zoomExtents(true)
+  _dp.zoomExtents(true)
+  _dp.animate()
 }
 
 function onClippingChanged (isClipping) {
   if (isClipping) {
     let model = RhinoApp.getActiveModel()
-    _pipeline.renderer.clippingPlanes = model.clippingPlanes
+    _dp.setClippingPlanes(model.clippingPlanes)
   } else {
-    _pipeline.renderer.clippingPlanes = []
+    _dp.setClippingPlanes([])
   }
 }
 
 function onDisplayModeChanged () {
   let useSSAO = RhinoApp.viewModel().displayMode.name === 'Arctic'
-  _pipeline.enableSSAO(useSSAO)
+  _dp.enableSSAO(useSSAO)
 }
 
 export default {
@@ -382,11 +197,11 @@ export default {
       }).catch(e => alert(`Error:.\n${e}`))
     },
     updateCameraProjection () {
-      _pipeline.zoomExtents(true)
+      _dp.zoomExtents(true)
       this.setLeftButtonMode()
     },
     zoomExtents () {
-      _pipeline.zoomExtents(true)
+      _dp.zoomExtents(true)
     },
     togglePan () {
       this.panMode = !this.panMode
@@ -402,11 +217,9 @@ export default {
     },
     setLeftButtonMode () {
       if (this.panMode || !this.viewmodel.perspectiveCamera) {
-        _pipeline.controls.mouseButtons.LEFT = THREE.MOUSE.PAN
-        _pipeline.controls.touches.ONE = THREE.TOUCH.PAN
+        _dp.setPanMode(true)
       } else {
-        _pipeline.controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE
-        _pipeline.controls.touches.ONE = THREE.TOUCH.ROTATE
+        _dp.setPanMode(false)
       }
     }
   }
