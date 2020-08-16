@@ -1,22 +1,24 @@
 import * as THREE from 'three'
-import FileObj from './FileObj.js'
-import FileDraco from './FileDraco.js'
-import FilePly from './FilePly.js'
-import SceneUtilities from './SceneUtilities.js'
-import DisplayMode from './DisplayMode.js'
+import FileObj from './FileObj'
+import FileDraco from './FileDraco'
+import FilePly from './FilePly'
+import SceneUtilities from './SceneUtilities'
+import DisplayMode from './DisplayMode'
+import DisplayPipeline from './DisplayPipeline'
+import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 
+let _glElementId = ''
+let _dp = null
+let _redrawEnabled = false
 let _rhino3dm = null
 let _cachedDoc = null
 let _activeDocEventWatchers = []
-let _displayModeChangedEventWatchers = []
-let _clippingChangedEventWatchers = []
 let _viewmodel = {
   docExists: false,
   filename: 'rview WIP',
   expanded: ['Layers'],
   layers: [],
   perspectiveCamera: true,
-  onChangeCamera: function () {},
   currentMaterialStyle: 'Basic',
   materialOptions: ['Basic', 'PBR: Carbon Fiber', 'PBR: Chipped Paint Metal',
     'PBR: Scuffed Plastic', 'PBR: Streaked Metal'],
@@ -28,8 +30,7 @@ let _model = {
   three: {
     background: null,
     middleground: null,
-    foreground: null,
-    setBackground: null
+    foreground: null
   },
   threeObjectsOnLayer: {},
   threeGrid: null,
@@ -88,6 +89,45 @@ let RhinoApp = {
       })
     }
   },
+  enableRedraw (on) {
+    _redrawEnabled = on
+    if (on && _dp != null) {
+      _dp.animate()
+    }
+  },
+  redrawEnabled () {
+    return _redrawEnabled
+  },
+  registerWebGlElement (elementId) {
+    _glElementId = elementId
+  },
+  createScene () {
+    this.getDisplayPipeline()
+    this.disposeMiddleground()
+    this.disposeForeground()
+    let labelDiv = document.getElementById('labels')
+    labelDiv.innerHTML = ''
+    let model = this.getActiveModel()
+    model.three.middleground = new THREE.Scene()
+    model.three.foreground = new THREE.Scene()
+
+    model.clippingPlanes = []
+
+    if (model.three.background == null) {
+      model.three.background = new THREE.Scene()
+      model.three.background.background = new THREE.Color(0.75, 0.75, 0.75)
+      let grid = SceneUtilities.createGrid()
+      model.threeGrid = grid
+      model.three.background.add(grid)
+    }
+  },
+  getDisplayPipeline () {
+    if (_dp == null) {
+      if (_glElementId === '') throw new Error('no WebGl element defined')
+      _dp = new DisplayPipeline(document.getElementById(_glElementId))
+    }
+    return _dp
+  },
   getRhino3dm () {
     return _rhino3dm
   },
@@ -126,22 +166,22 @@ let RhinoApp = {
     if (performRegen) {
       this.regen()
     }
-    _displayModeChangedEventWatchers.forEach((ew) => { ew() })
-  },
-
-  setClippingMode () {
-    _clippingChangedEventWatchers.forEach((ew) => { ew(_viewmodel.displayMode.clipping) })
+    const useSSAO = this.viewModel().displayMode.name === 'Arctic'
+    if (_dp != null) {
+      _dp.enableSSAO(useSSAO)
+    }
   },
 
   updateColors () {
     const dm = _viewmodel.displayMode
     _model.cameraLight.color = new THREE.Color(dm.lightColor)
+    if (_dp == null) return
     if (dm.backgroundStyle === DisplayMode.backgroundModes[0]) {
-      _model.three.setBackground(_model.three.background, dm.backgroundColor)
+      _dp.setBackground(_model.three.background, dm.backgroundColor)
     } else if (dm.backgroundStyle === DisplayMode.backgroundModes[1]) {
-      _model.three.setBackground(_model.three.background, dm.backgroundGradientTop, dm.backgroundGradientBottom)
+      _dp.setBackground(_model.three.background, dm.backgroundGradientTop, dm.backgroundGradientBottom)
     } else {
-      _model.three.setBackground(_model.three.background, null, null, dm.backgroundStyle)
+      _dp.setBackground(_model.three.background, null, null, dm.backgroundStyle)
     }
   },
   updateMaterial () {
@@ -276,6 +316,7 @@ let RhinoApp = {
     }
 
     _activeDocEventWatchers.forEach((ew) => { ew() })
+    this.onActiveDocChanged()
     this.regen()
   },
   getActiveModel () {
@@ -283,12 +324,6 @@ let RhinoApp = {
   },
   addActiveDocChangedEventWatcher (eventWatcher) {
     _activeDocEventWatchers.push(eventWatcher)
-  },
-  addDisplayModeChangedEventWatcher (eventWatcher) {
-    _displayModeChangedEventWatchers.push(eventWatcher)
-  },
-  addClippingChangedEventWatcher (eventWatcher) {
-    _clippingChangedEventWatchers.push(eventWatcher)
   },
   disposeMiddleground () {
     if (_model.three.middleground) {
@@ -322,6 +357,66 @@ let RhinoApp = {
       })
     })
     return bbox
+  },
+  onActiveDocChanged () {
+    console.log('Building Scene')
+    this.redrawEnabled(false)
+    this.createScene()
+    let model = this.getActiveModel()
+    let doc = model.rhinoDoc
+
+    let objects = doc.objects()
+    for (let i = 0; i < objects.count; i++) {
+      let modelObject = objects.get(i)
+      if (modelObject == null) {
+        continue
+      }
+      let geometry = modelObject.geometry()
+      let attr = modelObject.attributes()
+      if (attr.isInstanceDefinitionObject) {
+        continue
+      }
+      let layer = doc.layers().get(attr.layerIndex)
+      let rootLayer = layer.fullPath.split('::')[0]
+      if (!model.threeObjectsOnLayer[rootLayer]) {
+        model.threeObjectsOnLayer[rootLayer] = []
+      }
+      let objectsToAdd = SceneUtilities.createThreeGeometry(geometry, attr, doc)
+
+      objectsToAdd.forEach((obj) => {
+        let threeGeometry = obj[0]
+        let bbox = obj[1]
+        if (bbox) {
+          let minPoint = new THREE.Vector3(bbox.min[0], bbox.min[1], bbox.min[2])
+          let maxPoint = new THREE.Vector3(bbox.max[0], bbox.max[1], bbox.max[2])
+          threeGeometry.boundingBox = new THREE.Box3(minPoint, maxPoint)
+          bbox.delete()
+        }
+        switch (threeGeometry.constructor) {
+          case CSS2DObject: // handling CSS2D lables type
+            model.three.foreground.add(threeGeometry)
+            model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
+            break
+          case THREE.Plane: // handling clipping planes
+            model.clippingPlanes.push(threeGeometry)
+            break
+          default:
+            model.three.middleground.add(threeGeometry)
+            model.threeObjectsOnLayer[rootLayer].push(threeGeometry)
+            break
+        }
+        // let box = new THREE.BoxHelper(threeGeometry, 0x000000)
+        // model.three.middleground.add(box)
+        // model.threeObjectsOnLayer[rootLayer].push(box)
+      })
+      modelObject.delete()
+      geometry.delete()
+      attr.delete()
+    }
+    objects.delete()
+    this.updateVisibility()
+    this.getDisplayPipeline().zoomExtents(true)
+    this.enableRedraw(true)
   }
 }
 
