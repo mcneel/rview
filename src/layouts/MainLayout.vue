@@ -174,15 +174,15 @@
 </template>
 
 <script>
-import RhinoApp from '../RhinoApp'
+import RViewApp from '../RViewApp'
 import DisplayMode from '../DisplayMode'
 
 export default {
   created () {
-    RhinoApp.addActiveDocChangedEventWatcher(() => { this.fileDrawerVisible = false })
+    RViewApp.addActiveDocChangedEventWatcher(() => { this.fileDrawerVisible = false })
   },
   data () {
-    let vm = RhinoApp.viewModel()
+    let vm = RViewApp.viewModel()
     return {
       layerDrawerVisible: false,
       fileDrawerVisible: true,
@@ -195,7 +195,7 @@ export default {
   },
   methods: {
     RhApp () {
-      return RhinoApp
+      return RViewApp
     },
     displayModeNames () {
       let names = []
@@ -213,7 +213,7 @@ export default {
       fetch('rhino_logo.3dm').then((res) => {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
-          RhinoApp.openFile('RhinoLogo.3dm', new Uint8Array(buffer))
+          RViewApp.openFile('RhinoLogo.3dm', new Uint8Array(buffer))
         })
       })
     },
@@ -225,7 +225,7 @@ export default {
         let reader = new FileReader()
         reader.onload = function (e) {
           var contents = e.target.result
-          RhinoApp.openFile(file.name, contents)
+          RViewApp.openFile(file.name, contents)
           document.body.removeChild(fileInput)
         }
         if (file.name.endsWith('.obj') || file.name.endsWith('.ply')) {

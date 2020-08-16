@@ -1,11 +1,11 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
-import RhinoApp from './RhinoApp.js'
+import RViewApp from './RViewApp.js'
 // import GlslGrid from './GlslGrid.js'
 import GlslLineList from './GlslLineList.js'
 
 function curveToPoints (curve, pointLimit) {
-  let rhino3dm = RhinoApp.getRhino3dm()
+  let rhino3dm = RViewApp.getRhino3dm()
   let pointCount = pointLimit
   let rc = []
   let ts = []
@@ -152,7 +152,7 @@ let SceneUtilities = {
   meshToThreejs (mesh, diffuse, materialId) {
     let textureCoords = mesh.textureCoordinates()
     if (textureCoords.count === 0) {
-      let rhino3dm = RhinoApp.getRhino3dm()
+      let rhino3dm = RViewApp.getRhino3dm()
       let sphere = new rhino3dm.Sphere([0, 0, 0], 1000)
       let mapping = rhino3dm.TextureMapping.createSphereMapping(sphere)
       mesh.setTextureCoordinates(mapping, null, false)
@@ -176,7 +176,7 @@ let SceneUtilities = {
     return meshObject
   },
   createThreeGeometry (geometry, attributes, doc) {
-    let rhino3dm = RhinoApp.getRhino3dm()
+    let rhino3dm = RViewApp.getRhino3dm()
     let objectsToAdd = []
     let color = attributes.drawColor(doc)
     const objectType = geometry.objectType
@@ -342,7 +342,7 @@ let SceneUtilities = {
   },
   createThreeMaterial (rhinoMaterial, doc) {
     let material = null
-    let rhino3dm = RhinoApp.getRhino3dm()
+    let rhino3dm = RViewApp.getRhino3dm()
 
     let textureLoader = new THREE.TextureLoader()
     let pbr = rhinoMaterial.physicallyBased()

@@ -68,8 +68,10 @@ function createNodes (dictionary) {
   return nodes
 }
 
-let RhinoApp = {
-  init (rh3dm, startwait, endwait) {
+export default class RViewApp {
+  static #redrawEnabled = false
+
+  static init (rh3dm, startwait, endwait) {
     _model.displayModes = DisplayMode.defaultModes()
     this.setActiveDisplayMode('Shaded', false)
     if (_rhino3dm == null) {
@@ -88,20 +90,20 @@ let RhinoApp = {
         }
       })
     }
-  },
-  enableRedraw (on) {
+  }
+  static enableRedraw (on) {
     _redrawEnabled = on
     if (on && _dp != null) {
       _dp.animate()
     }
-  },
-  redrawEnabled () {
+  }
+  static redrawEnabled () {
     return _redrawEnabled
-  },
-  registerWebGlElement (elementId) {
+  }
+  static registerWebGlElement (elementId) {
     _glElementId = elementId
-  },
-  createScene () {
+  }
+  static createScene () {
     this.getDisplayPipeline()
     this.disposeMiddleground()
     this.disposeForeground()
@@ -120,21 +122,21 @@ let RhinoApp = {
       model.threeGrid = grid
       model.three.background.add(grid)
     }
-  },
-  getDisplayPipeline () {
+  }
+  static getDisplayPipeline () {
     if (_dp == null) {
       if (_glElementId === '') throw new Error('no WebGl element defined')
       _dp = new DisplayPipeline(document.getElementById(_glElementId))
     }
     return _dp
-  },
-  getRhino3dm () {
+  }
+  static getRhino3dm () {
     return _rhino3dm
-  },
-  viewModel () {
+  }
+  static viewModel () {
     return _viewmodel
-  },
-  updateVisibility () {
+  }
+  static updateVisibility () {
     _viewmodel.layers.forEach((layer) => {
       let objects = _model.threeObjectsOnLayer[layer.label]
       if (objects != null) {
@@ -152,8 +154,8 @@ let RhinoApp = {
     if (_model.threeGrid) {
       _model.threeGrid.visible = _viewmodel.displayMode.showGrid
     }
-  },
-  setActiveDisplayMode (name, performRegen = true) {
+  }
+  static setActiveDisplayMode (name, performRegen = true) {
     for (let i = 0; i < _model.displayModes.length; i++) {
       if (_model.displayModes[i].name === name) {
         _viewmodel.displayMode = _model.displayModes[i]
@@ -170,9 +172,9 @@ let RhinoApp = {
     if (_dp != null) {
       _dp.enableSSAO(useSSAO)
     }
-  },
+  }
 
-  updateColors () {
+  static updateColors () {
     const dm = _viewmodel.displayMode
     _model.cameraLight.color = new THREE.Color(dm.lightColor)
     if (_dp == null) return
@@ -183,8 +185,8 @@ let RhinoApp = {
     } else {
       _dp.setBackground(_model.three.background, null, null, dm.backgroundStyle)
     }
-  },
-  updateMaterial () {
+  }
+  static updateMaterial () {
     /*
     if (_viewmodel.currentMaterialStyle !== _viewmodel.materialOptions[0]) {
       let name = _viewmodel.currentMaterialStyle.substr('PBR: '.length).toLowerCase()
@@ -194,13 +196,13 @@ let RhinoApp = {
       this.applyMaterial(null)
     }
     */
-  },
-  regen () {
+  }
+  static regen () {
     this.updateVisibility()
     this.updateColors()
     this.updateMaterial()
-  },
-  applyMaterial (material) {
+  }
+  static applyMaterial (material) {
     _viewmodel.layers.forEach((layer) => {
       let objects = _model.threeObjectsOnLayer[layer.label]
       if (objects != null) {
@@ -227,8 +229,8 @@ let RhinoApp = {
         })
       }
     })
-  },
-  applyMaterial2 (useRenderMaterial) {
+  }
+  static applyMaterial2 (useRenderMaterial) {
     _viewmodel.layers.forEach((layer) => {
       let objects = _model.threeObjectsOnLayer[layer.label]
       if (objects != null) {
@@ -262,8 +264,8 @@ let RhinoApp = {
         })
       }
     })
-  },
-  openFile (name, contents) {
+  }
+  static openFile (name, contents) {
     if (_rhino3dm == null) {
       _cachedDoc = [name, contents]
       return
@@ -281,8 +283,8 @@ let RhinoApp = {
       let doc = _rhino3dm.File3dm.fromByteArray(contents)
       doc ? this.setActiveDoc(name, doc) : alert('Invalid document.')
     }
-  },
-  setActiveDoc (name, doc) {
+  }
+  static setActiveDoc (name, doc) {
     console.log('setActiveDoc (' + name + ')')
 
     if (_model.rhinoDoc) {
@@ -318,26 +320,26 @@ let RhinoApp = {
     _activeDocEventWatchers.forEach((ew) => { ew() })
     this.onActiveDocChanged()
     this.regen()
-  },
-  getActiveModel () {
+  }
+  static getActiveModel () {
     return _model
-  },
-  addActiveDocChangedEventWatcher (eventWatcher) {
+  }
+  static addActiveDocChangedEventWatcher (eventWatcher) {
     _activeDocEventWatchers.push(eventWatcher)
-  },
-  disposeMiddleground () {
+  }
+  static disposeMiddleground () {
     if (_model.three.middleground) {
       _model.three.middleground.dispose()
       _model.three.middleground = null
     }
-  },
-  disposeForeground () {
+  }
+  static disposeForeground () {
     if (_model.three.foreground) {
       _model.three.foreground.dispose()
       _model.three.foreground = null
     }
-  },
-  visibleObjectsBoundingBox () {
+  }
+  static visibleObjectsBoundingBox () {
     let bbox = null
     _viewmodel.layers.forEach((layer) => {
       if (!layer.visible) {
@@ -357,10 +359,10 @@ let RhinoApp = {
       })
     })
     return bbox
-  },
-  onActiveDocChanged () {
+  }
+  static onActiveDocChanged () {
     console.log('Building Scene')
-    this.redrawEnabled(false)
+    RViewApp.#redrawEnabled = false
     this.createScene()
     let model = this.getActiveModel()
     let doc = model.rhinoDoc
@@ -416,8 +418,8 @@ let RhinoApp = {
     objects.delete()
     this.updateVisibility()
     this.getDisplayPipeline().zoomExtents(true)
-    this.enableRedraw(true)
+    RViewApp.#redrawEnabled = true
+    RViewApp.enableRedraw(true)
+    // start RenderLoop
   }
 }
-
-export default RhinoApp
