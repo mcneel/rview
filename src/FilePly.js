@@ -1,9 +1,9 @@
-import RhinoApp from './RhinoApp.js'
+import RViewApp from './RViewApp.js'
 import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader'
 
 let FilePly = {
   readFile (name, contents) {
-    let rhino3dm = RhinoApp.getRhino3dm()
+    let rhino3dm = RViewApp.getRhino3dm()
     let loader = new PLYLoader()
     let geometry = loader.parse(contents)
     let doc = new rhino3dm.File3dm()

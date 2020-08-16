@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js'
-import RhinoApp from './RhinoApp'
+import RViewApp from './RViewApp'
 import SceneUtilities from './SceneUtilities'
 
 export default class DisplayPipeline {
@@ -58,8 +58,8 @@ export default class DisplayPipeline {
     this.#controls.update()
     SceneUtilities.viewportSize.width = viewportWidth
     SceneUtilities.viewportSize.height = viewportHeight
-    let model = RhinoApp.getActiveModel()
-    const displayMode = RhinoApp.viewModel().displayMode
+    let model = RViewApp.getActiveModel()
+    const displayMode = RViewApp.viewModel().displayMode
     if (displayMode.clipping) {
       this.#renderer.clippingPlanes = model.clippingPlanes
     } else {
@@ -99,7 +99,7 @@ export default class DisplayPipeline {
     }
     if (on) {
       this.#effectComposer = new EffectComposer(this.renderer)
-      let model = RhinoApp.getActiveModel()
+      let model = RViewApp.getActiveModel()
       this.#ssaoPass = new SSAOPass(model.three.middleground, this.camera, this.#canvas.clientWidth, this.#canvas.clientHeight)
       this.#ssaoPass.kernelRadius = 18
       this.#ssaoPass.minDistance = 0.002
@@ -110,8 +110,8 @@ export default class DisplayPipeline {
   }
 
   updateFrustum () {
-    if (RhinoApp.viewModel().perspectiveCamera) {
-      let bbox = RhinoApp.visibleObjectsBoundingBox()
+    if (RViewApp.viewModel().perspectiveCamera) {
+      let bbox = RViewApp.visibleObjectsBoundingBox()
       let corners = this.boxCorners(bbox)
       let vector = new THREE.Vector3(0, 0, -1)
       vector.applyQuaternion(this.#camera.quaternion)
@@ -162,15 +162,15 @@ export default class DisplayPipeline {
   }
 
   zoomExtents (createNewCamera) {
-    let rhino3dm = RhinoApp.getRhino3dm()
-    let viewport = RhinoApp.viewModel().perspectiveCamera
+    let rhino3dm = RViewApp.getRhino3dm()
+    let viewport = RViewApp.viewModel().perspectiveCamera
       ? rhino3dm.ViewportInfo.defaultPerspective()
       : rhino3dm.ViewportInfo.defaultTop()
     let size = new THREE.Vector2(0, 0)
     this.#renderer.getSize(size)
     viewport.screenPort = [0, 0, size.x, size.y]
 
-    let b = RhinoApp.visibleObjectsBoundingBox()
+    let b = RViewApp.visibleObjectsBoundingBox()
     let bbox = new rhino3dm.BoundingBox(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z)
     let target = bbox.center
 
@@ -185,9 +185,9 @@ export default class DisplayPipeline {
     bbox.delete()
 
     if (createNewCamera) {
-      RhinoApp.getActiveModel().three.middleground.remove(this.#camera)
+      RViewApp.getActiveModel().three.middleground.remove(this.#camera)
       let fr = viewport.getFrustum()
-      if (RhinoApp.viewModel().perspectiveCamera) {
+      if (RViewApp.viewModel().perspectiveCamera) {
         this.#camera = new THREE.PerspectiveCamera(30, size.x / size.y, fr.near, fr.far)
       } else {
         this.#camera = new THREE.OrthographicCamera(fr.left, fr.right, fr.top, fr.bottom, fr.near, fr.far)
@@ -195,11 +195,11 @@ export default class DisplayPipeline {
       }
       this.#controls.object = this.#camera
 
-      let light = new THREE.DirectionalLight(RhinoApp.viewModel().lightColor)
+      let light = new THREE.DirectionalLight(RViewApp.viewModel().lightColor)
       light.position.set(0, 0, 1)
-      RhinoApp.getActiveModel().cameraLight = light
+      RViewApp.getActiveModel().cameraLight = light
       this.#camera.add(light)
-      RhinoApp.getActiveModel().three.middleground.add(this.#camera)
+      RViewApp.getActiveModel().three.middleground.add(this.#camera)
     }
 
     let location = viewport.cameraLocation

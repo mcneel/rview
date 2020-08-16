@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import RhinoApp from '../RhinoApp'
+import RViewApp from '../RViewApp'
 
 export default {
   data () {
@@ -45,14 +45,14 @@ export default {
   },
   computed: {
     docExists () {
-      return RhinoApp.viewModel().docExists
+      return RViewApp.viewModel().docExists
     },
     perspectiveCamera () {
-      return RhinoApp.viewModel().perspectiveCamera
+      return RViewApp.viewModel().perspectiveCamera
     }
   },
   created () {
-    RhinoApp.registerWebGlElement('canvasParent')
+    RViewApp.registerWebGlElement('canvasParent')
   },
   mounted () {
     if (this.$route.query && this.$route.query['url']) {
@@ -71,27 +71,27 @@ export default {
       fetch(url).then(async res => {
         if (res.status === 200) {
           const buffer = await res.arrayBuffer()
-          RhinoApp.openFile(url, new Uint8Array(buffer))
+          RViewApp.openFile(url, new Uint8Array(buffer))
         } else {
           alert(`Error retrieving resource.\n${res.status}`)
         }
       }).catch(e => alert(`Error:.\n${e}`))
     },
     zoomExtents () {
-      RhinoApp.getDisplayPipeline().zoomExtents(false)
+      RViewApp.getDisplayPipeline().zoomExtents(false)
     },
     togglePan () {
       this.panMode = !this.panMode
       this.setLeftButtonMode()
     },
     setProjection (perspective) {
-      if (RhinoApp.viewModel().perspectiveCamera === perspective) return
-      RhinoApp.viewModel().perspectiveCamera = perspective
-      RhinoApp.getDisplayPipeline().zoomExtents(true)
+      if (RViewApp.viewModel().perspectiveCamera === perspective) return
+      RViewApp.viewModel().perspectiveCamera = perspective
+      RViewApp.getDisplayPipeline().zoomExtents(true)
       this.setLeftButtonMode()
     },
     setLeftButtonMode () {
-      RhinoApp.getDisplayPipeline().setPanMode(this.panMode || !RhinoApp.viewModel().perspectiveCamera)
+      RViewApp.getDisplayPipeline().setPanMode(this.panMode || !RViewApp.viewModel().perspectiveCamera)
     }
   }
 }

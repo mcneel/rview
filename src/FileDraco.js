@@ -1,8 +1,8 @@
-import RhinoApp from './RhinoApp.js'
+import RViewApp from './RViewApp.js'
 
 let FileDraco = {
   readFile (name, buffer) {
-    let rhino3dm = RhinoApp.getRhino3dm()
+    let rhino3dm = RViewApp.getRhino3dm()
     let mesh = rhino3dm.DracoCompression.decompressByteArray(buffer)
     let doc = new rhino3dm.File3dm()
     let layer = new rhino3dm.Layer()
@@ -11,7 +11,7 @@ let FileDraco = {
     let attrs = new rhino3dm.ObjectAttributes()
     attrs.layersIndex = 0
     doc.objects().addMesh(mesh, attrs)
-    RhinoApp.setActiveDoc(name, doc)
+    RViewApp.setActiveDoc(name, doc)
   }
 }
 
