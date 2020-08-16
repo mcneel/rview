@@ -15,7 +15,7 @@ export default class DisplayPipeline {
   #effectComposer = null
   #ssaoPass = null
 
-  constructor (window, canvas) {
+  constructor (canvas) {
     console.log('create pipeline')
     THREE.Object3D.DefaultUp = new THREE.Vector3(0, 0, 1)
     this.#renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -59,6 +59,13 @@ export default class DisplayPipeline {
     SceneUtilities.viewportSize.width = viewportWidth
     SceneUtilities.viewportSize.height = viewportHeight
     let model = RhinoApp.getActiveModel()
+    const displayMode = RhinoApp.viewModel().displayMode
+    if (displayMode.clipping) {
+      this.#renderer.clippingPlanes = model.clippingPlanes
+    } else {
+      this.#renderer.clippingPlanes = []
+    }
+
     this.#renderer.autoClear = false
     this.#renderer.sortObjects = false
     this.#renderer.render(model.three.background, this.#camera)
@@ -141,12 +148,7 @@ export default class DisplayPipeline {
       // matrix = matrix.makeRotationY(Math.PI / 2.0)
       // texture.matrix.setFromMatrix4(matrix)
       scene.background = texture
-      this.animate(true)
     }
-  }
-
-  setClippingPlanes (cp) {
-    this.#renderer.clippingPlanes = cp
   }
 
   setPanMode (on) {
@@ -183,7 +185,7 @@ export default class DisplayPipeline {
     bbox.delete()
 
     if (createNewCamera) {
-      RhinoApp.getActiveModel().three.middleground.remove(this.camera)
+      RhinoApp.getActiveModel().three.middleground.remove(this.#camera)
       let fr = viewport.getFrustum()
       if (RhinoApp.viewModel().perspectiveCamera) {
         this.#camera = new THREE.PerspectiveCamera(30, size.x / size.y, fr.near, fr.far)

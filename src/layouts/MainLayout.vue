@@ -135,7 +135,7 @@
           <q-item-section avatar></q-item-section>
           <q-item-section><q-item-label>Clipping Planes</q-item-label></q-item-section>
           <q-item-section side>
-            <q-toggle v-model="viewmodel.displayMode.clipping" @input="RhApp().setClippingMode()"/>
+            <q-toggle v-model="viewmodel.displayMode.clipping"/>
           </q-item-section>
         </q-item>
         <!--<q-item>
