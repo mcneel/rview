@@ -1,9 +1,7 @@
-import RViewApp from './RViewApp.js'
 import { OBJLoader2 } from 'three/examples/jsm/loaders/OBJLoader2'
 
 let FileObj = {
-  readFile (name, contents) {
-    let rhino3dm = RViewApp.getRhino3dm()
+  readFile (name, contents, rhino3dm) {
     let objLoader = new OBJLoader2()
     let threeObj = objLoader.parse(contents)
     let doc = new rhino3dm.File3dm()

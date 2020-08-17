@@ -1,21 +1,15 @@
 import * as THREE from 'three'
-import FileObj from './FileObj'
-import FileDraco from './FileDraco'
-import FilePly from './FilePly'
 import SceneUtilities from './SceneUtilities'
 import DisplayMode from './DisplayMode'
 import DisplayPipeline from './DisplayPipeline'
+import RViewDoc from './RViewDoc'
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 
-let _glElementId = ''
-let _dp = null
-let _redrawEnabled = false
-let _rhino3dm = null
 let _cachedDoc = null
 let _activeDocEventWatchers = []
 let _viewmodel = {
   docExists: false,
-  filename: 'rview WIP',
+  title: 'rview WIP',
   expanded: ['Layers'],
   layers: [],
   perspectiveCamera: true,
@@ -25,18 +19,7 @@ let _viewmodel = {
   displayMode: null
 }
 
-let _model = {
-  rhinoDoc: null,
-  three: {
-    background: null,
-    middleground: null,
-    foreground: null
-  },
-  threeObjectsOnLayer: {},
-  threeGrid: null,
-  cameraLight: null,
-  displayModes: null
-}
+let _displayModes = DisplayMode.defaultModes()
 
 function addToDictionary (node, chunks, layer) {
   chunks.forEach((chunk) => {
@@ -69,47 +52,113 @@ function createNodes (dictionary) {
 }
 
 export default class RViewApp {
+  static #rhino3dm = null // rhino3dm.js wasm library (needs to be loaded async)
   static #redrawEnabled = false
+  static #displayPipeline = null
+  static #glElementId = '' // parent DOM element id for WebGL control
+  static #activeDoc = null // document we are viewing. May contain data from more than one file
 
+  /**
+   * Called by top level App.vue to initialize rhino3dm wasm library. Web
+   * assemblies must be loaded async. This function shows a wait spinner that
+   * blocks UI untli the wasm is loaded
+   * @param {rhino3dm} rh3dm rhino3dm wasm to load
+   * @param {function} startwait function to call to show wait UI
+   * @param {function} endwait function to end wait UI
+   */
   static init (rh3dm, startwait, endwait) {
-    _model.displayModes = DisplayMode.defaultModes()
-    this.setActiveDisplayMode('Shaded', false)
-    if (_rhino3dm == null) {
+    RViewApp.setActiveDisplayMode('Shaded', false)
+    if (RViewApp.#rhino3dm == null) {
       let rhino3dmPromise = rh3dm()
       console.log('start loading rhino3dm')
       startwait()
       rhino3dmPromise.then(r => {
-        _rhino3dm = r
+        RViewApp.#rhino3dm = r
         endwait()
         console.log('rhino3dm loaded')
         if (_cachedDoc != null) {
           let name = _cachedDoc[0]
           let byteArray = _cachedDoc[1]
           _cachedDoc = null
-          this.openFile(name, byteArray)
+          RViewApp.openFile(name, byteArray)
         }
       })
     }
   }
-  static enableRedraw (on) {
-    _redrawEnabled = on
-    if (on && _dp != null) {
-      _dp.animate()
+
+  /**
+   * Set the DOM element that this app will draw WebGL content into
+   * @param {str} elementId id of the parent element for drawing
+   */
+  static registerWebGlElement (elementId) {
+    RViewApp.#glElementId = elementId
+  }
+
+  /**
+   * Open a single file and make it the active document. This closes the
+   * existing active document
+   * @param {str} name name of file being opening
+   * @param {str|ArrayBuffer} contents content of file
+   */
+  static openFile (name, contents) {
+    // if rhino3dm is not avaiable yet, store file in a variable that will
+    // be used to call back into this function once the module is loaded
+    if (RViewApp.#rhino3dm == null) {
+      _cachedDoc = [name, contents]
+      return
+    }
+
+    const doc = RViewDoc.create(name, contents, RViewApp.#rhino3dm)
+    if (doc != null) {
+      _viewmodel.title = name
+      RViewApp.setActiveDoc(doc)
+    } else {
+      alert('Invalid document')
     }
   }
-  static redrawEnabled () {
-    return _redrawEnabled
+
+  static setActiveDoc (doc) {
+    console.log('setActiveDoc')
+
+    if (RViewApp.#activeDoc != null) {
+      RViewApp.#activeDoc.dispose()
+    }
+    RViewApp.#activeDoc = doc
+
+    _viewmodel.docExists = (doc != null)
+    _viewmodel.layers.length = 0
+
+    if (doc) {
+      let layers = doc.rhinoDoc.layers()
+      let count = layers.count()
+      let topLayers = {
+        layers: {},
+        visible: true
+      }
+      for (let i = 0; i < count; i++) {
+        let layer = layers.get(i)
+        let fullpath = layer.fullPath
+        let chunks = fullpath.split('::')
+        addToDictionary(topLayers, chunks, layer)
+        layer.delete()
+      }
+
+      _viewmodel.layers = createNodes(topLayers)
+
+      layers.delete()
+    }
+
+    _activeDocEventWatchers.forEach((ew) => { ew() })
+    RViewApp.onActiveDocChanged()
+    RViewApp.regen()
   }
-  static registerWebGlElement (elementId) {
-    _glElementId = elementId
-  }
+
   static createScene () {
-    this.getDisplayPipeline()
-    this.disposeMiddleground()
-    this.disposeForeground()
+    RViewApp.getDisplayPipeline()
+
     let labelDiv = document.getElementById('labels')
     labelDiv.innerHTML = ''
-    let model = this.getActiveModel()
+    let model = RViewApp.getActiveModel()
     model.three.middleground = new THREE.Scene()
     model.three.foreground = new THREE.Scene()
 
@@ -124,21 +173,21 @@ export default class RViewApp {
     }
   }
   static getDisplayPipeline () {
-    if (_dp == null) {
-      if (_glElementId === '') throw new Error('no WebGl element defined')
-      _dp = new DisplayPipeline(document.getElementById(_glElementId))
+    if (RViewApp.#displayPipeline == null) {
+      if (RViewApp.#glElementId === '') throw new Error('no element defined for WebGL')
+      RViewApp.#displayPipeline = new DisplayPipeline(document.getElementById(RViewApp.#glElementId))
     }
-    return _dp
+    return RViewApp.#displayPipeline
   }
   static getRhino3dm () {
-    return _rhino3dm
+    return RViewApp.#rhino3dm
   }
   static viewModel () {
     return _viewmodel
   }
   static updateVisibility () {
     _viewmodel.layers.forEach((layer) => {
-      let objects = _model.threeObjectsOnLayer[layer.label]
+      let objects = RViewApp.#activeDoc.threeObjectsOnLayer[layer.label]
       if (objects != null) {
         objects.forEach((obj) => {
           obj.visible = layer.visible
@@ -151,39 +200,42 @@ export default class RViewApp {
         })
       }
     })
-    if (_model.threeGrid) {
-      _model.threeGrid.visible = _viewmodel.displayMode.showGrid
+    if (RViewApp.#activeDoc.threeGrid) {
+      RViewApp.#activeDoc.threeGrid.visible = _viewmodel.displayMode.showGrid
     }
   }
+
   static setActiveDisplayMode (name, performRegen = true) {
-    for (let i = 0; i < _model.displayModes.length; i++) {
-      if (_model.displayModes[i].name === name) {
-        _viewmodel.displayMode = _model.displayModes[i]
+    if (_displayModes == null) _displayModes = DisplayMode.defaultModes()
+
+    for (let i = 0; i < _displayModes.length; i++) {
+      if (_displayModes[i].name === name) {
+        _viewmodel.displayMode = _displayModes[i]
         break
       }
     }
 
-    this.applyMaterial2(name === 'Rendered')
+    RViewApp.applyMaterial2(name === 'Rendered')
 
     if (performRegen) {
-      this.regen()
+      RViewApp.regen()
     }
-    const useSSAO = this.viewModel().displayMode.name === 'Arctic'
-    if (_dp != null) {
-      _dp.enableSSAO(useSSAO)
+    const useSSAO = RViewApp.viewModel().displayMode.name === 'Arctic'
+    if (RViewApp.#displayPipeline != null) {
+      RViewApp.#displayPipeline.enableSSAO(useSSAO)
     }
   }
 
   static updateColors () {
     const dm = _viewmodel.displayMode
-    _model.cameraLight.color = new THREE.Color(dm.lightColor)
-    if (_dp == null) return
+    RViewApp.#activeDoc.cameraLight.color = new THREE.Color(dm.lightColor)
+    if (RViewApp.#displayPipeline == null) return
     if (dm.backgroundStyle === DisplayMode.backgroundModes[0]) {
-      _dp.setBackground(_model.three.background, dm.backgroundColor)
+      RViewApp.#displayPipeline.setBackground(RViewApp.#activeDoc.three.background, dm.backgroundColor)
     } else if (dm.backgroundStyle === DisplayMode.backgroundModes[1]) {
-      _dp.setBackground(_model.three.background, dm.backgroundGradientTop, dm.backgroundGradientBottom)
+      RViewApp.#displayPipeline.setBackground(RViewApp.#activeDoc.three.background, dm.backgroundGradientTop, dm.backgroundGradientBottom)
     } else {
-      _dp.setBackground(_model.three.background, null, null, dm.backgroundStyle)
+      RViewApp.#displayPipeline.setBackground(RViewApp.#activeDoc.three.background, null, null, dm.backgroundStyle)
     }
   }
   static updateMaterial () {
@@ -191,20 +243,20 @@ export default class RViewApp {
     if (_viewmodel.currentMaterialStyle !== _viewmodel.materialOptions[0]) {
       let name = _viewmodel.currentMaterialStyle.substr('PBR: '.length).toLowerCase()
       name = name.replace(/ /g, '-')
-      SceneUtilities.createPBRMaterial(name, this.applyMaterial)
+      SceneUtilities.createPBRMaterial(name, RViewApp.applyMaterial)
     } else {
-      this.applyMaterial(null)
+      RViewApp.applyMaterial(null)
     }
     */
   }
   static regen () {
-    this.updateVisibility()
-    this.updateColors()
-    this.updateMaterial()
+    RViewApp.updateVisibility()
+    RViewApp.updateColors()
+    RViewApp.updateMaterial()
   }
   static applyMaterial (material) {
     _viewmodel.layers.forEach((layer) => {
-      let objects = _model.threeObjectsOnLayer[layer.label]
+      let objects = RViewApp.#activeDoc.threeObjectsOnLayer[layer.label]
       if (objects != null) {
         objects.forEach((obj) => {
           if (obj.type === 'Mesh' && obj.userData['diffuse']) {
@@ -232,7 +284,7 @@ export default class RViewApp {
   }
   static applyMaterial2 (useRenderMaterial) {
     _viewmodel.layers.forEach((layer) => {
-      let objects = _model.threeObjectsOnLayer[layer.label]
+      let objects = RViewApp.#activeDoc.threeObjectsOnLayer[layer.label]
       if (objects != null) {
         objects.forEach((obj) => {
           if (obj.type === 'Mesh' && obj.userData['diffuse']) {
@@ -243,9 +295,9 @@ export default class RViewApp {
 
             if (useRenderMaterial) {
               let id = obj.userData['materialId']
-              let materials = _model.rhinoDoc.materials()
+              let materials = RViewApp.#activeDoc.rhinoDoc.materials()
               let material = materials.findId(id)
-              obj.material = SceneUtilities.createThreeMaterial(material, _model.rhinoDoc)
+              obj.material = SceneUtilities.createThreeMaterial(material, RViewApp.#activeDoc.rhinoDoc)
               material.delete()
               materials.delete()
             }
@@ -265,79 +317,11 @@ export default class RViewApp {
       }
     })
   }
-  static openFile (name, contents) {
-    if (_rhino3dm == null) {
-      _cachedDoc = [name, contents]
-      return
-    }
-
-    if (name.endsWith('.obj')) {
-      let doc = FileObj.readFile(name, contents)
-      doc ? this.setActiveDoc(name, doc) : alert('Invalid document.')
-    } else if (name.endsWith('.drc')) {
-      FileDraco.readFile(name, contents)
-    } else if (name.endsWith('.ply')) {
-      let doc = FilePly.readFile(name, contents)
-      doc ? this.setActiveDoc(name, doc) : alert('Invalid document.')
-    } else {
-      let doc = _rhino3dm.File3dm.fromByteArray(contents)
-      doc ? this.setActiveDoc(name, doc) : alert('Invalid document.')
-    }
-  }
-  static setActiveDoc (name, doc) {
-    console.log('setActiveDoc (' + name + ')')
-
-    if (_model.rhinoDoc) {
-      _model.rhinoDoc.delete()
-    }
-    this.disposeMiddleground()
-    this.disposeForeground()
-    _model.threeObjectsOnLayer = {}
-    _model.rhinoDoc = doc
-    _viewmodel.docExists = (doc != null)
-    _viewmodel.filename = name
-    _viewmodel.layers.length = 0
-    if (doc) {
-      let layers = doc.layers()
-      let count = layers.count()
-      let topLayers = {
-        layers: {},
-        visible: true
-      }
-      for (let i = 0; i < count; i++) {
-        let layer = layers.get(i)
-        let fullpath = layer.fullPath
-        let chunks = fullpath.split('::')
-        addToDictionary(topLayers, chunks, layer)
-        layer.delete()
-      }
-
-      _viewmodel.layers = createNodes(topLayers)
-
-      layers.delete()
-    }
-
-    _activeDocEventWatchers.forEach((ew) => { ew() })
-    this.onActiveDocChanged()
-    this.regen()
-  }
   static getActiveModel () {
-    return _model
+    return RViewApp.#activeDoc
   }
   static addActiveDocChangedEventWatcher (eventWatcher) {
     _activeDocEventWatchers.push(eventWatcher)
-  }
-  static disposeMiddleground () {
-    if (_model.three.middleground) {
-      _model.three.middleground.dispose()
-      _model.three.middleground = null
-    }
-  }
-  static disposeForeground () {
-    if (_model.three.foreground) {
-      _model.three.foreground.dispose()
-      _model.three.foreground = null
-    }
   }
   static visibleObjectsBoundingBox () {
     let bbox = null
@@ -345,7 +329,7 @@ export default class RViewApp {
       if (!layer.visible) {
         return
       }
-      let objects = _model.threeObjectsOnLayer[layer.label]
+      let objects = RViewApp.#activeDoc.threeObjectsOnLayer[layer.label]
       if (objects == null) {
         return
       }
@@ -363,8 +347,8 @@ export default class RViewApp {
   static onActiveDocChanged () {
     console.log('Building Scene')
     RViewApp.#redrawEnabled = false
-    this.createScene()
-    let model = this.getActiveModel()
+    RViewApp.createScene()
+    let model = RViewApp.getActiveModel()
     let doc = model.rhinoDoc
 
     let objects = doc.objects()
@@ -416,10 +400,23 @@ export default class RViewApp {
       attr.delete()
     }
     objects.delete()
-    this.updateVisibility()
-    this.getDisplayPipeline().zoomExtents(true)
+    RViewApp.updateVisibility()
+    RViewApp.getDisplayPipeline().zoomExtents(true)
     RViewApp.#redrawEnabled = true
-    RViewApp.enableRedraw(true)
-    // start RenderLoop
+    // Make sure the render loop is running
+    requestAnimationFrame(() => RViewApp.renderLoop())
+  }
+
+  /**
+   * Private method called by the browser's animation redraw system. This
+   * method is used to constantly redraw the WebGL viewport
+   */
+  static renderLoop () {
+    // constantly requeue a redraw
+    requestAnimationFrame(() => RViewApp.renderLoop())
+    // don't draw if drawing is disabled or there is no pipeline to draw
+    if (!RViewApp.#redrawEnabled || RViewApp.#displayPipeline == null) return
+
+    RViewApp.#displayPipeline.drawFrameBuffer()
   }
 }

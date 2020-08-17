@@ -11,50 +11,50 @@ export default class DisplayPipeline {
   #labelRenderer = null
   #camera = null
   #controls = null
-  #canvas = null
+  #parentElement = null // parent DOM element on page that the WebGL control is added to
   #effectComposer = null
   #ssaoPass = null
+  #frameSize = [0, 0]
 
-  constructor (canvas) {
+  constructor (parentElement) {
     console.log('create pipeline')
     THREE.Object3D.DefaultUp = new THREE.Vector3(0, 0, 1)
     this.#renderer = new THREE.WebGLRenderer({ antialias: true })
     this.#renderer.setPixelRatio(window.devicePixelRatio)
-    this.#renderer.setSize(canvas.clientWidth, canvas.clientHeight)
-    this.#canvas = canvas
-    this.#canvas.appendChild(this.#renderer.domElement)
-
-    window.addEventListener('resize', () => this.animate(true), false)
+    this.#renderer.setSize(parentElement.clientWidth, parentElement.clientHeight)
+    this.#parentElement = parentElement
+    this.#parentElement.appendChild(this.#renderer.domElement)
 
     this.#labelRenderer = new CSS2DRenderer()
     this.#labelRenderer.domElement.id = 'labels'
-    this.#labelRenderer.setSize(canvas.clientWidth, canvas.clientHeight)
+    this.#labelRenderer.setSize(parentElement.clientWidth, parentElement.clientHeight)
     this.#labelRenderer.domElement.style.position = 'absolute'
     this.#labelRenderer.domElement.style.top = 0
     this.#labelRenderer.domElement.style.pointerEvents = 'none'
-    canvas.appendChild(this.#labelRenderer.domElement)
+    parentElement.appendChild(this.#labelRenderer.domElement)
 
-    this.#camera = new THREE.PerspectiveCamera(30, canvas.clientWidth / canvas.clientHeight, 1, 1000)
+    this.#camera = new THREE.PerspectiveCamera(30, parentElement.clientWidth / parentElement.clientHeight, 1, 1000)
     this.#camera.position.z = 40
     this.#controls = new OrbitControls(this.#camera, this.#renderer.domElement)
     this.#controls.screenSpacePanning = true
     this.#controls.addEventListener('change', () => this.updateFrustum())
   }
 
-  animate (windowResize = false) {
-    let viewportWidth = this.#canvas.clientWidth
-    let viewportHeight = this.#canvas.clientHeight
+  drawFrameBuffer () {
+    let viewportWidth = this.#parentElement.clientWidth
+    let viewportHeight = this.#parentElement.clientHeight
+    const windowResize = this.#frameSize[0] !== this.#parentElement.clientWidth || this.#frameSize[1] !== this.#parentElement.clientHeight
+    this.#frameSize = [this.#parentElement.clientWidth, this.#parentElement.clientHeight]
 
     if (windowResize || this.#effectComposer) {
-      this.#camera.aspect = this.#canvas.clientWidth / this.#canvas.clientHeight
+      this.#camera.aspect = this.#parentElement.clientWidth / this.#parentElement.clientHeight
       this.#camera.updateProjectionMatrix()
-      this.#renderer.setSize(this.#canvas.clientWidth, this.#canvas.clientHeight)
-      this.#labelRenderer.setSize(this.#canvas.clientWidth, this.#canvas.clientHeight)
+      this.#renderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
+      this.#labelRenderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
       if (this.#effectComposer) {
-        this.#effectComposer.setSize(this.#canvas.clientWidth, this.#canvas.clientHeight)
+        this.#effectComposer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
       }
     }
-    requestAnimationFrame(() => this.animate())
     this.#controls.update()
     SceneUtilities.viewportSize.width = viewportWidth
     SceneUtilities.viewportSize.height = viewportHeight
@@ -100,7 +100,7 @@ export default class DisplayPipeline {
     if (on) {
       this.#effectComposer = new EffectComposer(this.renderer)
       let model = RViewApp.getActiveModel()
-      this.#ssaoPass = new SSAOPass(model.three.middleground, this.camera, this.#canvas.clientWidth, this.#canvas.clientHeight)
+      this.#ssaoPass = new SSAOPass(model.three.middleground, this.camera, this.#parentElement.clientWidth, this.#parentElement.clientHeight)
       this.#ssaoPass.kernelRadius = 18
       this.#ssaoPass.minDistance = 0.002
       this.#ssaoPass.maxDistance = 0.2
@@ -129,16 +129,16 @@ export default class DisplayPipeline {
       scene.background = new THREE.Color(color1)
     }
     if (color1 && color2) {
-      let canvas = document.createElement('canvas')
-      canvas.width = 128
-      canvas.height = 128
-      let context = canvas.getContext('2d')
-      let gradient = context.createLinearGradient(0, 0, 0, canvas.height)
+      let parentElement = document.createElement('parentElement')
+      parentElement.width = 128
+      parentElement.height = 128
+      let context = parentElement.getContext('2d')
+      let gradient = context.createLinearGradient(0, 0, 0, parentElement.height)
       gradient.addColorStop(1, color2)
       gradient.addColorStop(0.1, color1)
       context.fillStyle = gradient
-      context.fillRect(0, 0, canvas.width, canvas.height)
-      scene.background = new THREE.CanvasTexture(canvas)
+      context.fillRect(0, 0, parentElement.width, parentElement.height)
+      scene.background = new THREE.CanvasTexture(parentElement)
     }
     if (environment) {
       let ctl = new THREE.CubeTextureLoader()

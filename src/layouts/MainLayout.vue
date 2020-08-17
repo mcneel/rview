@@ -25,7 +25,7 @@
 
         <q-toolbar-title>
         </q-toolbar-title>
-        <div>{{viewmodel.filename}}</div>
+        <div>{{viewmodel.title}}</div>
       </q-toolbar>
     </q-header>
 
