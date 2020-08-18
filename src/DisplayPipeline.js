@@ -4,6 +4,7 @@ import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js'
 import RViewApp from './RViewApp'
+import DisplayMode from './DisplayMode'
 import SceneUtilities from './SceneUtilities'
 
 export default class DisplayPipeline {
@@ -15,6 +16,7 @@ export default class DisplayPipeline {
   #effectComposer = null
   #ssaoPass = null
   #frameSize = [0, 0]
+  #backgroundScene = new THREE.Scene()
 
   constructor (parentElement) {
     console.log('create pipeline')
@@ -40,7 +42,7 @@ export default class DisplayPipeline {
     this.#controls.addEventListener('change', () => this.updateFrustum())
   }
 
-  drawFrameBuffer () {
+  drawFrameBuffer (displayMode) {
     let viewportWidth = this.#parentElement.clientWidth
     let viewportHeight = this.#parentElement.clientHeight
     const windowResize = this.#frameSize[0] !== this.#parentElement.clientWidth || this.#frameSize[1] !== this.#parentElement.clientHeight
@@ -59,16 +61,14 @@ export default class DisplayPipeline {
     SceneUtilities.viewportSize.width = viewportWidth
     SceneUtilities.viewportSize.height = viewportHeight
     let model = RViewApp.getActiveModel()
-    const displayMode = RViewApp.viewModel().displayMode
     if (displayMode.clipping) {
       this.#renderer.clippingPlanes = model.clippingPlanes
     } else {
       this.#renderer.clippingPlanes = []
     }
 
-    this.#renderer.autoClear = false
-    this.#renderer.sortObjects = false
-    this.#renderer.render(model.three.background, this.#camera)
+    this.drawBackground(displayMode)
+
     this.#renderer.sortObjects = true
     this.#labelRenderer.render(model.three.foreground, this.#camera)
 
@@ -77,6 +77,35 @@ export default class DisplayPipeline {
     } else {
       this.#renderer.render(model.three.middleground, this.#camera)
     }
+  }
+
+  drawBackground (displayMode) {
+    // Draw background color and grid based on passed in display mode
+    if (displayMode.backgroundStyle === DisplayMode.backgroundModes[0]) {
+      // single color
+      this.#backgroundScene.background = new THREE.Color(displayMode.backgroundColor)
+    } else if (displayMode.backgroundStyle === DisplayMode.backgroundModes[1]) {
+      const parentElement = document.createElement('canvas')
+      parentElement.width = 128
+      parentElement.height = 128
+      let context = parentElement.getContext('2d')
+      let gradient = context.createLinearGradient(0, 0, 0, parentElement.height)
+      gradient.addColorStop(1, displayMode.backgroundGradientTop)
+      gradient.addColorStop(0.1, displayMode.backgroundGradientBottom)
+      context.fillStyle = gradient
+      context.fillRect(0, 0, parentElement.width, parentElement.height)
+      this.#backgroundScene.background = new THREE.CanvasTexture(parentElement)
+    }
+
+    if (this.#backgroundScene.grid == null) {
+      this.#backgroundScene.grid = SceneUtilities.createGrid()
+      this.#backgroundScene.add(this.#backgroundScene.grid)
+    }
+    this.#backgroundScene.grid.visible = displayMode.showGrid
+
+    this.#renderer.autoClear = false
+    this.#renderer.sortObjects = false
+    this.#renderer.render(this.#backgroundScene, this.#camera)
   }
 
   boxCorners (box) {
@@ -121,33 +150,6 @@ export default class DisplayPipeline {
       this.#camera.near = Math.max(0.1, Math.min(...distances))
       this.#camera.far = Math.max(...distances)
       this.#camera.updateProjectionMatrix()
-    }
-  }
-
-  setBackground (scene, color1, color2 = null, environment = null) {
-    if (!color2 && !environment) {
-      scene.background = new THREE.Color(color1)
-    }
-    if (color1 && color2) {
-      let parentElement = document.createElement('parentElement')
-      parentElement.width = 128
-      parentElement.height = 128
-      let context = parentElement.getContext('2d')
-      let gradient = context.createLinearGradient(0, 0, 0, parentElement.height)
-      gradient.addColorStop(1, color2)
-      gradient.addColorStop(0.1, color1)
-      context.fillStyle = gradient
-      context.fillRect(0, 0, parentElement.width, parentElement.height)
-      scene.background = new THREE.CanvasTexture(parentElement)
-    }
-    if (environment) {
-      let ctl = new THREE.CubeTextureLoader()
-      ctl.setPath('cubemaps/' + environment + '/')
-      let texture = ctl.load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'])
-      // let matrix = new THREE.Matrix4()
-      // matrix = matrix.makeRotationY(Math.PI / 2.0)
-      // texture.matrix.setFromMatrix4(matrix)
-      scene.background = texture
     }
   }
 
