@@ -19,44 +19,13 @@ let _viewmodel = {
   displayMode: null
 }
 
-let _displayModes = DisplayMode.defaultModes()
-
-function addToDictionary (node, chunks, layer) {
-  chunks.forEach((chunk) => {
-    if (!node.layers.hasOwnProperty(chunk)) {
-      node.layers[chunk] = {
-        visible: true,
-        layers: {}
-      }
-    }
-    node = node.layers[chunk]
-  })
-  node.visible = layer.visible
-}
-
-function createNodes (dictionary) {
-  let nodes = []
-  let names = Object.getOwnPropertyNames(dictionary.layers)
-  names.forEach((name) => {
-    let node = {
-      label: name,
-      visible: dictionary.layers[name].visible
-    }
-    let childNodes = createNodes(dictionary.layers[name])
-    if (childNodes.length > 0) {
-      node.children = childNodes
-    }
-    nodes.push(node)
-  })
-  return nodes
-}
-
 export default class RViewApp {
   static #rhino3dm = null // rhino3dm.js wasm library (needs to be loaded async)
   static #redrawEnabled = false
   static #displayPipeline = null
   static #glElementId = '' // parent DOM element id for WebGL control
   static #activeDoc = null // document we are viewing. May contain data from more than one file
+  static #displayModes = DisplayMode.defaultModes()
 
   /**
    * Called by top level App.vue to initialize rhino3dm wasm library. Web
@@ -123,54 +92,20 @@ export default class RViewApp {
     if (RViewApp.#activeDoc != null) {
       RViewApp.#activeDoc.dispose()
     }
-    RViewApp.#activeDoc = doc
 
+    RViewApp.#activeDoc = doc
     _viewmodel.docExists = (doc != null)
     _viewmodel.layers.length = 0
-
-    if (doc) {
-      let layers = doc.rhinoDoc.layers()
-      let count = layers.count()
-      let topLayers = {
-        layers: {},
-        visible: true
-      }
-      for (let i = 0; i < count; i++) {
-        let layer = layers.get(i)
-        let fullpath = layer.fullPath
-        let chunks = fullpath.split('::')
-        addToDictionary(topLayers, chunks, layer)
-        layer.delete()
-      }
-
-      _viewmodel.layers = createNodes(topLayers)
-
-      layers.delete()
-    }
+    if (doc) _viewmodel.layers = doc.layers
 
     _activeDocEventWatchers.forEach((ew) => { ew() })
     RViewApp.onActiveDocChanged()
-    RViewApp.regen()
+    RViewApp.updateVisibility()
   }
 
   static createScene () {
-    RViewApp.getDisplayPipeline()
-
     let labelDiv = document.getElementById('labels')
-    labelDiv.innerHTML = ''
-    let model = RViewApp.getActiveModel()
-    model.three.middleground = new THREE.Scene()
-    model.three.foreground = new THREE.Scene()
-
-    model.clippingPlanes = []
-
-    if (model.three.background == null) {
-      model.three.background = new THREE.Scene()
-      model.three.background.background = new THREE.Color(0.75, 0.75, 0.75)
-      let grid = SceneUtilities.createGrid()
-      model.threeGrid = grid
-      model.three.background.add(grid)
-    }
+    if (labelDiv != null) labelDiv.innerHTML = ''
   }
   static getDisplayPipeline () {
     if (RViewApp.#displayPipeline == null) {
@@ -200,17 +135,14 @@ export default class RViewApp {
         })
       }
     })
-    if (RViewApp.#activeDoc.threeGrid) {
-      RViewApp.#activeDoc.threeGrid.visible = _viewmodel.displayMode.showGrid
-    }
   }
 
   static setActiveDisplayMode (name, performRegen = true) {
-    if (_displayModes == null) _displayModes = DisplayMode.defaultModes()
+    if (RViewApp.#displayModes == null) RViewApp.#displayModes = DisplayMode.defaultModes()
 
-    for (let i = 0; i < _displayModes.length; i++) {
-      if (_displayModes[i].name === name) {
-        _viewmodel.displayMode = _displayModes[i]
+    for (let i = 0; i < RViewApp.#displayModes.length; i++) {
+      if (RViewApp.#displayModes[i].name === name) {
+        _viewmodel.displayMode = RViewApp.#displayModes[i]
         break
       }
     }
@@ -218,7 +150,7 @@ export default class RViewApp {
     RViewApp.applyMaterial2(name === 'Rendered')
 
     if (performRegen) {
-      RViewApp.regen()
+      RViewApp.updateVisibility()
     }
     const useSSAO = RViewApp.viewModel().displayMode.name === 'Arctic'
     if (RViewApp.#displayPipeline != null) {
@@ -226,34 +158,6 @@ export default class RViewApp {
     }
   }
 
-  static updateColors () {
-    const dm = _viewmodel.displayMode
-    RViewApp.#activeDoc.cameraLight.color = new THREE.Color(dm.lightColor)
-    if (RViewApp.#displayPipeline == null) return
-    if (dm.backgroundStyle === DisplayMode.backgroundModes[0]) {
-      RViewApp.#displayPipeline.setBackground(RViewApp.#activeDoc.three.background, dm.backgroundColor)
-    } else if (dm.backgroundStyle === DisplayMode.backgroundModes[1]) {
-      RViewApp.#displayPipeline.setBackground(RViewApp.#activeDoc.three.background, dm.backgroundGradientTop, dm.backgroundGradientBottom)
-    } else {
-      RViewApp.#displayPipeline.setBackground(RViewApp.#activeDoc.three.background, null, null, dm.backgroundStyle)
-    }
-  }
-  static updateMaterial () {
-    /*
-    if (_viewmodel.currentMaterialStyle !== _viewmodel.materialOptions[0]) {
-      let name = _viewmodel.currentMaterialStyle.substr('PBR: '.length).toLowerCase()
-      name = name.replace(/ /g, '-')
-      SceneUtilities.createPBRMaterial(name, RViewApp.applyMaterial)
-    } else {
-      RViewApp.applyMaterial(null)
-    }
-    */
-  }
-  static regen () {
-    RViewApp.updateVisibility()
-    RViewApp.updateColors()
-    RViewApp.updateMaterial()
-  }
   static applyMaterial (material) {
     _viewmodel.layers.forEach((layer) => {
       let objects = RViewApp.#activeDoc.threeObjectsOnLayer[layer.label]
@@ -417,6 +321,6 @@ export default class RViewApp {
     // don't draw if drawing is disabled or there is no pipeline to draw
     if (!RViewApp.#redrawEnabled || RViewApp.#displayPipeline == null) return
 
-    RViewApp.#displayPipeline.drawFrameBuffer()
+    RViewApp.#displayPipeline.drawFrameBuffer(_viewmodel.displayMode)
   }
 }

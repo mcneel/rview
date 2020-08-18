@@ -88,7 +88,7 @@
                 dense
                 options-dense
                 :options="backgroundModes"
-                @input="RhApp().updateColors()"/>
+              />
             </q-item-section>
             <q-item v-if="viewmodel.displayMode.backgroundStyle===backgroundModes[0] || viewmodel.displayMode.backgroundStyle===backgroundModes[1]">
               <q-item-section>
@@ -97,8 +97,8 @@
               <q-item-section side>
                 <q-btn round size="xs" icon="colorize" color="primary">
                   <q-popup-proxy>
-                    <q-color v-if="viewmodel.displayMode.backgroundStyle===backgroundModes[0]" v-model="viewmodel.displayMode.backgroundColor" @input="RhApp().updateColors()"/>
-                    <q-color v-if="viewmodel.displayMode.backgroundStyle===backgroundModes[1]" v-model="viewmodel.displayMode.backgroundGradientTop" @input="RhApp().updateColors()"/>
+                    <q-color v-if="viewmodel.displayMode.backgroundStyle===backgroundModes[0]" v-model="viewmodel.displayMode.backgroundColor"/>
+                    <q-color v-if="viewmodel.displayMode.backgroundStyle===backgroundModes[1]" v-model="viewmodel.displayMode.backgroundGradientTop"/>
                   </q-popup-proxy>
                 </q-btn>
               </q-item-section>
@@ -110,7 +110,7 @@
               <q-item-section side>
                 <q-btn round size="xs" icon="colorize" color="primary">
                   <q-popup-proxy>
-                    <q-color v-model="viewmodel.displayMode.backgroundGradientBottom" @input="RhApp().updateColors()"/>
+                    <q-color v-model="viewmodel.displayMode.backgroundGradientBottom"/>
                   </q-popup-proxy>
                 </q-btn>
               </q-item-section>
@@ -148,7 +148,7 @@
           <q-item-section side>
             <q-btn round size="xs" icon="colorize" color="primary">
               <q-popup-proxy>
-                <q-color v-model="viewmodel.displayMode.lightColor" @input="RhApp().updateColors()"/>
+                <q-color v-model="viewmodel.displayMode.lightColor"/>
               </q-popup-proxy>
             </q-btn>
           </q-item-section>
@@ -161,7 +161,7 @@
                 dense
                 options-dense
                 :options="viewmodel.materialOptions"
-                @input="RhApp().updateMaterial()"/>
+              />
             </q-item-section>
           </q-list>
         </q-expansion-item>
