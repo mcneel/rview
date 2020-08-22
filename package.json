@@ -10,9 +10,9 @@
     "test": "echo \"No test specified\" && exit 0"
   },
   "dependencies": {
-    "@quasar/extras": "^1.8.2",
+    "@quasar/extras": "^1.9.4",
     "core-js": "^3.0.0",
-    "quasar": "^1.12.12",
+    "quasar": "^1.12.13",
     "three": "^0.113.2"
   },
   "devDependencies": {

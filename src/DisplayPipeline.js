@@ -1,8 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
-import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js'
 import RViewApp from './RViewApp'
 import DisplayMode from './DisplayMode'
 import SceneUtilities from './SceneUtilities'
@@ -13,10 +11,11 @@ export default class DisplayPipeline {
   #camera = null
   #controls = null
   #parentElement = null // parent DOM element on page that the WebGL control is added to
-  #effectComposer = null
-  #ssaoPass = null
   #frameSize = [0, 0]
   #backgroundScene = new THREE.Scene()
+  #middlegroundTexture = [null, null]
+  #screenQuad = [null, null]
+  #screenQuadScene = new THREE.Scene()
 
   constructor (parentElement) {
     console.log('create pipeline')
@@ -40,6 +39,10 @@ export default class DisplayPipeline {
     this.#controls = new OrbitControls(this.#camera, this.#renderer.domElement)
     this.#controls.screenSpacePanning = true
     this.#controls.addEventListener('change', () => this.updateFrustum())
+
+    this.#screenQuad[0] = SceneUtilities.createScreenQuad()
+    this.#screenQuad[1] = SceneUtilities.createScreenQuad()
+    this.#screenQuadScene.add(this.#screenQuad[0])
   }
 
   drawFrameBuffer (displayMode) {
@@ -48,14 +51,11 @@ export default class DisplayPipeline {
     const windowResize = this.#frameSize[0] !== this.#parentElement.clientWidth || this.#frameSize[1] !== this.#parentElement.clientHeight
     this.#frameSize = [this.#parentElement.clientWidth, this.#parentElement.clientHeight]
 
-    if (windowResize || this.#effectComposer) {
+    if (windowResize) {
       this.#camera.aspect = this.#parentElement.clientWidth / this.#parentElement.clientHeight
       this.#camera.updateProjectionMatrix()
       this.#renderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
       this.#labelRenderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
-      if (this.#effectComposer) {
-        this.#effectComposer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
-      }
     }
     this.#controls.update()
     SceneUtilities.viewportSize.width = viewportWidth
@@ -67,16 +67,33 @@ export default class DisplayPipeline {
       this.#renderer.clippingPlanes = []
     }
 
+    // Drawing is performed in several stages.
+    // - draw background/grid with no depth tesiting/writing
+    // - draw middleground to texture
+    // - draw the middleground texture to the main view
+    // My goal is to eventually have two models loaded and drawn
+    // to two different middleground textures. Once that is
+    // done, we can draw the two textures in different ways to
+    // the screen for different types of comparison.
+    this.#renderer.autoClear = false
+    this.#renderer.sortObjects = false
+    // background draw will still clear the depth/color buffer
+    // since the background scene defines a background fill color
     this.drawBackground(displayMode)
+    this.drawMiddlegroundToTexture(0, model.three.middleground)
+
+    this.#screenQuad[0].material.uniforms.image.value = this.#middlegroundTexture[0].texture
+    this.#screenQuad[0].material.uniforms.horizontalRange.value = new THREE.Vector2(0.0, 1.0)
+    this.#renderer.render(this.#screenQuadScene, this.#camera)
+
+    // Below is the old fashioned way to draw directly to the element's
+    // framebuffer.
+    /*
+    this.#renderer.render(model.three.middleground, this.#camera)
 
     this.#renderer.sortObjects = true
     this.#labelRenderer.render(model.three.foreground, this.#camera)
-
-    if (this.#effectComposer && this.#effectComposer.passes[0].enabled) {
-      this.#effectComposer.render()
-    } else {
-      this.#renderer.render(model.three.middleground, this.#camera)
-    }
+    */
   }
 
   drawBackground (displayMode) {
@@ -103,9 +120,23 @@ export default class DisplayPipeline {
     }
     this.#backgroundScene.grid.visible = displayMode.showGrid
 
-    this.#renderer.autoClear = false
-    this.#renderer.sortObjects = false
     this.#renderer.render(this.#backgroundScene, this.#camera)
+  }
+
+  drawMiddlegroundToTexture (index, scene) {
+    if (this.#middlegroundTexture[index] == null) {
+      this.#middlegroundTexture[index] = new THREE.WebGLRenderTarget(this.#frameSize[0], this.#frameSize[1])
+    }
+    // supersample to get around AA issues
+    if (this.#middlegroundTexture[index].width !== this.#frameSize[0] || this.#middlegroundTexture[index].height !== this.#frameSize[1]) {
+      this.#middlegroundTexture[index].setSize(this.#frameSize[0] * 2.0, this.#frameSize[1] * 2.0)
+    }
+    this.#renderer.setRenderTarget(this.#middlegroundTexture[index])
+    this.#renderer.setClearColor(new THREE.Color(0, 0, 0), 0)
+    this.#renderer.clear(true, true)
+
+    this.#renderer.render(scene, this.#camera)
+    this.#renderer.setRenderTarget(null)
   }
 
   boxCorners (box) {
@@ -119,23 +150,6 @@ export default class DisplayPipeline {
       new THREE.Vector3(box.max.x, box.max.y, box.min.z), // 110
       new THREE.Vector3(box.max.x, box.max.y, box.max.z) // 111
     ]
-  }
-
-  enableSSAO (on) {
-    if (this.#effectComposer) {
-      this.#effectComposer.passes[0].enabled = on
-      return
-    }
-    if (on) {
-      this.#effectComposer = new EffectComposer(this.renderer)
-      let model = RViewApp.getActiveModel()
-      this.#ssaoPass = new SSAOPass(model.three.middleground, this.camera, this.#parentElement.clientWidth, this.#parentElement.clientHeight)
-      this.#ssaoPass.kernelRadius = 18
-      this.#ssaoPass.minDistance = 0.002
-      this.#ssaoPass.maxDistance = 0.2
-      this.#ssaoPass.output = SSAOPass.OUTPUT.SSAO
-      this.#effectComposer.addPass(this.#ssaoPass)
-    }
   }
 
   updateFrustum () {

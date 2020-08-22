@@ -1,8 +1,9 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
-import RViewApp from './RViewApp.js'
+import RViewApp from './RViewApp'
 // import GlslGrid from './GlslGrid.js'
-import GlslLineList from './GlslLineList.js'
+import GlslLineList from './GlslLineList'
+import GlslScreenQuad from './GlslScreenQuad'
 
 function curveToPoints (curve, pointLimit) {
   let rhino3dm = RViewApp.getRhino3dm()
@@ -384,6 +385,9 @@ let SceneUtilities = {
     }
     pbr.delete()
     return material
+  },
+  createScreenQuad () {
+    return GlslScreenQuad.createThreeObject()
   },
   viewportSize: new THREE.Vector2(0, 0)
 }
