@@ -22,14 +22,6 @@ function renderedDisplayMode () {
   return mode
 }
 
-function arcticDisplayMode () {
-  let mode = new Mode('Arctic')
-  mode.showGrid = false
-  mode.backgroundColor = 'rgb(250,250,250)'
-  mode.showSurfaceWires = false
-  return mode
-}
-
 class Mode {
   constructor (name = null) {
     this.name = name
@@ -49,7 +41,6 @@ class Mode {
       modes.push(shadedDisplayMode())
       modes.push(ghostedDisplayMode())
       modes.push(renderedDisplayMode())
-      modes.push(arcticDisplayMode())
       return modes
     }
   }

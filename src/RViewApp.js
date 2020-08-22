@@ -152,10 +152,6 @@ export default class RViewApp {
     if (performRegen) {
       RViewApp.updateVisibility()
     }
-    const useSSAO = RViewApp.viewModel().displayMode.name === 'Arctic'
-    if (RViewApp.#displayPipeline != null) {
-      RViewApp.#displayPipeline.enableSSAO(useSSAO)
-    }
   }
 
   static applyMaterial (material) {
@@ -187,6 +183,7 @@ export default class RViewApp {
     })
   }
   static applyMaterial2 (useRenderMaterial) {
+    console.log('apply materials')
     _viewmodel.layers.forEach((layer) => {
       let objects = RViewApp.#activeDoc.threeObjectsOnLayer[layer.label]
       if (objects != null) {
