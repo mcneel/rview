@@ -37,8 +37,14 @@
             <q-icon name="img:logo.png"/>
           </q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="openFile()">
+        <q-item clickable v-ripple @click="openFile(false)">
           <q-item-section>Open...</q-item-section>
+          <q-item-section avatar>
+            <q-icon color="primary" name="folder" />
+          </q-item-section>
+        </q-item>
+        <q-item v-if="viewmodel.docExists" clickable v-ripple @click="openFile(true)">
+          <q-item-section>Open Compare...</q-item-section>
           <q-item-section avatar>
             <q-icon color="primary" name="folder" />
           </q-item-section>
@@ -55,7 +61,7 @@
           >
           <template v-slot:header>
             <q-item-section avatar>
-              <q-toggle v-model="layer.visible" @input="RhApp().updateVisibility()"/>
+              <q-toggle v-model="layer.visible" @input="updateVisibility()"/>
             </q-item-section>
             <q-item-section>
               {{layer.label}}
@@ -77,8 +83,8 @@
             outlined
             dense
             options-dense
-            :options="displayModeNames()"
-            @input="RhApp().setActiveDisplayMode(currentDisplayModeName)"/>
+            :options="displayModeNames"
+            @input="setActiveDisplayMode(currentDisplayModeName)"/>
         </q-item-section>
         <q-expansion-item expand-separator icon="landscape" label="Background" :content-inset-level="1">
           <q-list>
@@ -121,14 +127,14 @@
           <q-item-section avatar><q-icon name="grid_on"/></q-item-section>
           <q-item-section><q-item-label>Grid</q-item-label></q-item-section>
           <q-item-section side>
-            <q-toggle v-model="viewmodel.displayMode.showGrid" @input="RhApp().updateVisibility()"/>
+            <q-toggle v-model="viewmodel.displayMode.showGrid" @input="updateVisibility()"/>
           </q-item-section>
         </q-item>
         <q-item dense>
           <q-item-section avatar></q-item-section>
           <q-item-section><q-item-label>Surface Wires</q-item-label></q-item-section>
           <q-item-section side>
-            <q-toggle v-model="viewmodel.displayMode.showSurfaceWires" @input="RhApp().updateVisibility()"/>
+            <q-toggle v-model="viewmodel.displayMode.showSurfaceWires" @input="updateVisibility()"/>
           </q-item-section>
         </q-item>
         <q-item dense>
@@ -138,21 +144,6 @@
             <q-toggle v-model="viewmodel.displayMode.clipping"/>
           </q-item-section>
         </q-item>
-        <!--<q-item>
-          <q-item-section avatar>
-            <q-icon name="brightness_low"/>
-          </q-item-section>
-          <q-item-section>
-            <q-item-label>Light Color</q-item-label>
-          </q-item-section>
-          <q-item-section side>
-            <q-btn round size="xs" icon="colorize" color="primary">
-              <q-popup-proxy>
-                <q-color v-model="viewmodel.displayMode.lightColor"/>
-              </q-popup-proxy>
-            </q-btn>
-          </q-item-section>
-        </q-item>-->
         <q-expansion-item expand-separator icon="palette" label="Material" :content-inset-level="1">
           <q-list>
             <q-item-section>
@@ -193,17 +184,16 @@ export default {
       currentDisplayModeName: vm.displayMode.name
     }
   },
-  methods: {
-    RhApp () {
-      return RViewApp
-    },
+  computed: {
     displayModeNames () {
       let names = []
       DisplayMode.defaultModes().forEach((mode) => {
         names.push(mode.name)
       })
-      return names
-    },
+      return Object.freeze(names)
+    }
+  },
+  methods: {
     toggleDrawer (drawer) {
       this.fileDrawerVisible = (drawer === this.drawers.FILE) ? !this.fileDrawerVisible : false
       this.layerDrawerVisible = (drawer === this.drawers.LAYER) ? !this.layerDrawerVisible : false
@@ -217,7 +207,7 @@ export default {
         })
       })
     },
-    openFile () {
+    openFile (asCompare) {
       let fileInput = document.createElement('input')
       let readFile = function (e) {
         let file = e.target.files[0]
@@ -225,7 +215,7 @@ export default {
         let reader = new FileReader()
         reader.onload = function (e) {
           var contents = e.target.result
-          RViewApp.openFile(file.name, contents)
+          RViewApp.openFile(file.name, contents, asCompare)
           document.body.removeChild(fileInput)
         }
         if (file.name.endsWith('.obj') || file.name.endsWith('.ply')) {
@@ -242,6 +232,12 @@ export default {
       let eventMouse = document.createEvent('MouseEvents')
       eventMouse.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null)
       fileInput.dispatchEvent(eventMouse)
+    },
+    setActiveDisplayMode (name) {
+      RViewApp.setActiveDisplayMode(name)
+    },
+    updateVisibility () {
+      RViewApp.updateVisibility()
     }
   }
 }
