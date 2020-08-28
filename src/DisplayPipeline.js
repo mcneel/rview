@@ -45,7 +45,7 @@ export default class DisplayPipeline {
     this.#screenQuadScene.add(this.#screenQuad[0])
   }
 
-  drawFrameBuffer (displayMode) {
+  drawFrameBuffer (displayMode, baseDocument, compareDocument) {
     let viewportWidth = this.#parentElement.clientWidth
     let viewportHeight = this.#parentElement.clientHeight
     const windowResize = this.#frameSize[0] !== this.#parentElement.clientWidth || this.#frameSize[1] !== this.#parentElement.clientHeight
@@ -60,9 +60,8 @@ export default class DisplayPipeline {
     this.#controls.update()
     SceneUtilities.viewportSize.width = viewportWidth
     SceneUtilities.viewportSize.height = viewportHeight
-    let model = RViewApp.getActiveModel()
     if (displayMode.clipping) {
-      this.#renderer.clippingPlanes = model.clippingPlanes
+      this.#renderer.clippingPlanes = baseDocument.clippingPlanes
     } else {
       this.#renderer.clippingPlanes = []
     }
@@ -80,7 +79,7 @@ export default class DisplayPipeline {
     // background draw will still clear the depth/color buffer
     // since the background scene defines a background fill color
     this.drawBackground(displayMode)
-    this.drawMiddlegroundToTexture(0, model.three.middleground)
+    this.drawMiddlegroundToTexture(0, baseDocument.three.middleground)
 
     this.#screenQuad[0].material.uniforms.image.value = this.#middlegroundTexture[0].texture
     this.#screenQuad[0].material.uniforms.horizontalRange.value = new THREE.Vector2(0.0, 1.0)
