@@ -42,7 +42,7 @@ export default class RViewDoc {
     middleground: null,
     foreground: null
   }
-  cameraLight = null
+  syncCamera = null
   clippingPlanes = []
   #threeObjectsByRootLayer = null
 

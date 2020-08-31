@@ -5,9 +5,9 @@ import DisplayPipeline from './DisplayPipeline'
 import RViewDoc from './RViewDoc'
 
 let _cachedDoc = null
-let _activeDocEventWatchers = []
 let _viewmodel = {
   docExists: false,
+  compareDocExists: false,
   title: 'rview WIP',
   expanded: ['Layers'],
   layers: [],
@@ -15,7 +15,8 @@ let _viewmodel = {
   currentMaterialStyle: 'Basic',
   materialOptions: ['Basic', 'PBR: Carbon Fiber', 'PBR: Chipped Paint Metal',
     'PBR: Scuffed Plastic', 'PBR: Streaked Metal'],
-  displayMode: null
+  displayMode: null,
+  comparePosition: 50
 }
 
 export default class RViewApp {
@@ -68,51 +69,60 @@ export default class RViewApp {
    * @param {str} name name of file being opening
    * @param {str|ArrayBuffer} contents content of file
    * @param {boolean} asCompare open the file as a 2nd comparison model
+   * @returns true if a document is successfully opened
    */
   static openFile (name, contents, asCompare = false) {
     // if rhino3dm is not available yet, store file in a variable that will
     // be used to call back into this function once the module is loaded
     if (RViewApp.#rhino3dm == null) {
       _cachedDoc = [name, contents]
-      return
+      return false
     }
 
     const doc = RViewDoc.create(name, contents, RViewApp.#rhino3dm)
-    if (doc == null) alert('Invalid document')
+    if (doc == null) {
+      alert('Invalid document')
+      return false
+    }
 
     if (asCompare && RViewApp.#activeDoc != null) {
       if (RViewApp.#compareDoc != null) RViewApp.#compareDoc.dispose()
       RViewApp.#compareDoc = doc
+      _viewmodel.compareDocExists = true
     } else {
       _viewmodel.title = name
-      RViewApp.setActiveDoc(doc)
-    }
-  }
-
-  static setActiveDoc (doc) {
-    console.log('setActiveDoc')
-
-    if (RViewApp.#activeDoc != null) {
-      RViewApp.#activeDoc.dispose()
+      if (RViewApp.#activeDoc != null) RViewApp.#activeDoc.dispose()
+      RViewApp.#activeDoc = doc
     }
 
-    RViewApp.#activeDoc = doc
-    _viewmodel.docExists = (doc != null)
-    _viewmodel.layers.length = 0
-    if (doc) _viewmodel.layers = doc.layers
+    _viewmodel.docExists = true
+    // rebuild layers
+    _viewmodel.layers = RViewApp.#activeDoc.layers
+    if (RViewApp.#compareDoc != null) {
+      let compareList = []
+      for (let i = 0; i < RViewApp.#compareDoc.layers.length; i++) {
+        let addToList = true
+        for (let j = 0; j < _viewmodel.layers.length; j++) {
+          if (_viewmodel.layers[j].label === RViewApp.#compareDoc.layers[i].label) {
+            addToList = false
+            break
+          }
+        }
+        if (addToList) compareList.push(RViewApp.#compareDoc.layers[i])
+      }
+      _viewmodel.layers = _viewmodel.layers.concat(compareList)
+    }
 
-    _activeDocEventWatchers.forEach((ew) => { ew() })
-    RViewApp.createScene()
+    let labelDiv = document.getElementById('labels')
+    if (labelDiv != null) labelDiv.innerHTML = ''
+
     RViewApp.updateVisibility()
     RViewApp.getDisplayPipeline().zoomExtents(true)
     // Make sure the render loop is running
     requestAnimationFrame(() => RViewApp.renderLoop())
+    return true
   }
 
-  static createScene () {
-    let labelDiv = document.getElementById('labels')
-    if (labelDiv != null) labelDiv.innerHTML = ''
-  }
   static getDisplayPipeline () {
     if (RViewApp.#displayPipeline == null) {
       if (RViewApp.#glElementId === '') throw new Error('no element defined for WebGL')
@@ -120,26 +130,26 @@ export default class RViewApp {
     }
     return RViewApp.#displayPipeline
   }
+
   static getRhino3dm () {
     return RViewApp.#rhino3dm
   }
+
   static viewModel () {
     return _viewmodel
   }
+
   static updateVisibility () {
     _viewmodel.layers.forEach((layer) => {
-      let objects = RViewApp.#activeDoc.getSceneObjectsOnLayer(layer.label)
-      if (objects != null) {
-        objects.forEach((obj) => {
-          obj.visible = layer.visible
-          if (obj.visible && obj.type === 'Mesh') {
-            obj.visible = _viewmodel.displayMode.showSurfaceMeshes
-          }
-          if (obj.visible && obj.userData['surfaceWires']) {
-            obj.visible = _viewmodel.displayMode.showSurfaceWires
-          }
-        })
-      }
+      RViewApp.getSceneObjectsOnLayer(layer.label).forEach((obj) => {
+        obj.visible = layer.visible
+        if (obj.visible && obj.type === 'Mesh') {
+          obj.visible = _viewmodel.displayMode.showSurfaceMeshes
+        }
+        if (obj.visible && obj.userData['surfaceWires']) {
+          obj.visible = _viewmodel.displayMode.showSurfaceWires
+        }
+      })
     })
   }
 
@@ -162,7 +172,7 @@ export default class RViewApp {
 
   static applyMaterial (material) {
     _viewmodel.layers.forEach((layer) => {
-      let objects = RViewApp.#activeDoc.getSceneObjectsOnLayer(layer.label)
+      let objects = RViewApp.getSceneObjectsOnLayer(layer.label)
       if (objects != null) {
         objects.forEach((obj) => {
           if (obj.type === 'Mesh' && obj.userData['diffuse']) {
@@ -191,7 +201,7 @@ export default class RViewApp {
   static applyMaterial2 (useRenderMaterial) {
     console.log('apply materials')
     _viewmodel.layers.forEach((layer) => {
-      let objects = RViewApp.#activeDoc.getSceneObjectsOnLayer(layer.label)
+      let objects = RViewApp.getSceneObjectsOnLayer(layer.label)
       if (objects != null) {
         objects.forEach((obj) => {
           if (obj.type === 'Mesh' && obj.userData['diffuse']) {
@@ -227,16 +237,27 @@ export default class RViewApp {
   static getActiveModel () {
     return RViewApp.#activeDoc
   }
-  static addActiveDocChangedEventWatcher (eventWatcher) {
-    _activeDocEventWatchers.push(eventWatcher)
+
+  static getSceneObjectsOnLayer (rootLayerName) {
+    let objects = []
+    if (RViewApp.#activeDoc != null) {
+      const activeDocObjects = RViewApp.#activeDoc.getSceneObjectsOnLayer(rootLayerName)
+      if (activeDocObjects != null) objects = objects.concat(activeDocObjects)
+    }
+    if (RViewApp.#compareDoc != null) {
+      const compareDocObjects = RViewApp.#compareDoc.getSceneObjectsOnLayer(rootLayerName)
+      if (compareDocObjects != null) objects = objects.concat(compareDocObjects)
+    }
+    return objects
   }
+
   static visibleObjectsBoundingBox () {
     let bbox = null
     _viewmodel.layers.forEach((layer) => {
       if (!layer.visible) {
         return
       }
-      let objects = RViewApp.#activeDoc.getSceneObjectsOnLayer(layer.label)
+      let objects = RViewApp.getSceneObjectsOnLayer(layer.label)
       if (objects == null) {
         return
       }
@@ -262,6 +283,10 @@ export default class RViewApp {
     // don't draw if there is no pipeline to draw
     if (RViewApp.#displayPipeline == null) return
 
-    RViewApp.#displayPipeline.drawFrameBuffer(_viewmodel.displayMode, RViewApp.#activeDoc, RViewApp.#compareDoc)
+    RViewApp.#displayPipeline.drawFrameBuffer(
+      _viewmodel.displayMode,
+      RViewApp.#activeDoc,
+      RViewApp.#compareDoc,
+      _viewmodel.comparePosition)
   }
 }
