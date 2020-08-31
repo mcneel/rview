@@ -43,9 +43,11 @@ export default class DisplayPipeline {
     this.#screenQuad[0] = SceneUtilities.createScreenQuad()
     this.#screenQuad[1] = SceneUtilities.createScreenQuad()
     this.#screenQuadScene.add(this.#screenQuad[0])
+    this.#screenQuadScene.add(this.#screenQuad[1])
   }
 
-  drawFrameBuffer (displayMode, baseDocument, compareDocument) {
+  drawFrameBuffer (displayMode, baseDocument, compareDocument, comparePosition) {
+    if (compareDocument == null) comparePosition = 100
     let viewportWidth = this.#parentElement.clientWidth
     let viewportHeight = this.#parentElement.clientHeight
     const windowResize = this.#frameSize[0] !== this.#parentElement.clientWidth || this.#frameSize[1] !== this.#parentElement.clientHeight
@@ -80,9 +82,22 @@ export default class DisplayPipeline {
     // since the background scene defines a background fill color
     this.drawBackground(displayMode)
     this.drawMiddlegroundToTexture(0, baseDocument.three.middleground)
-
     this.#screenQuad[0].material.uniforms.image.value = this.#middlegroundTexture[0].texture
-    this.#screenQuad[0].material.uniforms.horizontalRange.value = new THREE.Vector2(0.0, 1.0)
+    const x = comparePosition / 100.0
+    this.#screenQuad[0].material.uniforms.horizontalRange.value = new THREE.Vector2(0.0, x)
+
+    this.#screenQuad[1].visible = (compareDocument != null)
+    if (compareDocument != null) {
+      if (compareDocument.syncCamera == null) {
+        compareDocument.syncCamera = this.#camera.clone()
+        compareDocument.three.middleground.add(this.#camera.clone())
+      }
+      compareDocument.syncCamera.copy(this.#camera, true)
+      this.drawMiddlegroundToTexture(1, compareDocument.three.middleground)
+      this.#screenQuad[1].material.uniforms.image.value = this.#middlegroundTexture[1].texture
+      this.#screenQuad[1].material.uniforms.horizontalRange.value = new THREE.Vector2(x, 1.0)
+    }
+
     this.#renderer.render(this.#screenQuadScene, this.#camera)
 
     // Below is the old fashioned way to draw directly to the element's
@@ -212,7 +227,6 @@ export default class DisplayPipeline {
 
       let light = new THREE.DirectionalLight(RViewApp.viewModel().lightColor)
       light.position.set(0, 0, 1)
-      RViewApp.getActiveModel().cameraLight = light
       this.#camera.add(light)
       RViewApp.getActiveModel().three.middleground.add(this.#camera)
     }

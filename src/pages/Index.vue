@@ -1,9 +1,14 @@
 <template>
-  <q-page id='canvasParent' class="flex flex-center">
+  <q-page class="flex flex-center" id='canvasParent'>
     <q-card flat v-if="!docExists">
       <q-img alt="rview" src="logo.png"/>
       <q-card-section class="text-h6">rview WIP</q-card-section>
     </q-card>
+    <div
+      v-if="showCompareSlider"
+      style="position: absolute; top: 0; left: 0; width: 100%;">
+      <q-slider :min="0" :max="100" v-model="viewmodel.comparePosition" class="z-fab"/>
+    </div>
     <q-page-sticky position="bottom-left" :offset="[10, 10]" v-if="docExists">
       <q-fab color="primary" icon="keyboard_arrow_up" direction="up">
         <q-fab-action
@@ -36,8 +41,10 @@ import RViewApp from '../RViewApp'
 
 export default {
   data () {
+    const vm = RViewApp.viewModel()
     return {
-      panMode: false
+      panMode: false,
+      viewmodel: vm
     }
   },
   props: {
@@ -49,6 +56,9 @@ export default {
     },
     perspectiveCamera () {
       return RViewApp.viewModel().perspectiveCamera
+    },
+    showCompareSlider () {
+      return this.viewmodel.docExists && this.viewmodel.compareDocExists
     }
   },
   created () {

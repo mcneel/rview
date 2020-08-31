@@ -169,9 +169,6 @@ import RViewApp from '../RViewApp'
 import DisplayMode from '../DisplayMode'
 
 export default {
-  created () {
-    RViewApp.addActiveDocChangedEventWatcher(() => { this.fileDrawerVisible = false })
-  },
   data () {
     let vm = RViewApp.viewModel()
     return {
@@ -204,19 +201,23 @@ export default {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
           RViewApp.openFile('RhinoLogo.3dm', new Uint8Array(buffer))
+          this.fileDrawerVisible = false
         })
       })
     },
     openFile (asCompare) {
       let fileInput = document.createElement('input')
+      const localVM = this
       let readFile = function (e) {
         let file = e.target.files[0]
         if (!file) { return }
         let reader = new FileReader()
         reader.onload = function (e) {
           var contents = e.target.result
-          RViewApp.openFile(file.name, contents, asCompare)
+          console.log('hererererere')
+          const openSuccess = RViewApp.openFile(file.name, contents, asCompare)
           document.body.removeChild(fileInput)
+          if (openSuccess) localVM.fileDrawerVisible = false
         }
         if (file.name.endsWith('.obj') || file.name.endsWith('.ply')) {
           reader.readAsText(file)
