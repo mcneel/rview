@@ -14,7 +14,7 @@ export default class DisplayPipeline {
   #frameSize = [0, 0]
   #backgroundScene = new THREE.Scene()
   #middlegroundTexture = [null, null]
-  #screenQuad = [null, null]
+  #screenQuad = null
   #screenQuadScene = new THREE.Scene()
 
   constructor (parentElement) {
@@ -40,13 +40,11 @@ export default class DisplayPipeline {
     this.#controls.screenSpacePanning = true
     this.#controls.addEventListener('change', () => this.updateFrustum())
 
-    this.#screenQuad[0] = SceneUtilities.createScreenQuad()
-    this.#screenQuad[1] = SceneUtilities.createScreenQuad()
-    this.#screenQuadScene.add(this.#screenQuad[0])
-    this.#screenQuadScene.add(this.#screenQuad[1])
+    this.#screenQuad = SceneUtilities.createScreenQuad()
+    this.#screenQuadScene.add(this.#screenQuad)
   }
 
-  drawFrameBuffer (displayMode, baseDocument, compareDocument, comparePosition) {
+  drawFrameBuffer (displayMode, baseDocument, compareDocument, compareMode, comparePosition) {
     if (compareDocument == null) comparePosition = 100
     let viewportWidth = this.#parentElement.clientWidth
     let viewportHeight = this.#parentElement.clientHeight
@@ -82,11 +80,11 @@ export default class DisplayPipeline {
     // since the background scene defines a background fill color
     this.drawBackground(displayMode)
     this.drawMiddlegroundToTexture(0, baseDocument.three.middleground)
-    this.#screenQuad[0].material.uniforms.image.value = this.#middlegroundTexture[0].texture
+    this.#screenQuad.material.uniforms.imageLeft.value = this.#middlegroundTexture[0].texture
     const x = comparePosition / 100.0
-    this.#screenQuad[0].material.uniforms.horizontalRange.value = new THREE.Vector2(0.0, x)
+    this.#screenQuad.material.uniforms.horizontalPosition.value = x
+    this.#screenQuad.material.uniforms.compareMode.value = compareMode
 
-    this.#screenQuad[1].visible = (compareDocument != null)
     if (compareDocument != null) {
       if (compareDocument.syncCamera == null) {
         compareDocument.syncCamera = this.#camera.clone()
@@ -94,8 +92,9 @@ export default class DisplayPipeline {
       }
       compareDocument.syncCamera.copy(this.#camera, true)
       this.drawMiddlegroundToTexture(1, compareDocument.three.middleground)
-      this.#screenQuad[1].material.uniforms.image.value = this.#middlegroundTexture[1].texture
-      this.#screenQuad[1].material.uniforms.horizontalRange.value = new THREE.Vector2(x, 1.0)
+      this.#screenQuad.material.uniforms.imageRight.value = this.#middlegroundTexture[1].texture
+    } else {
+      this.#screenQuad.material.uniforms.imageRight.value = this.#middlegroundTexture[0].texture
     }
 
     this.#renderer.render(this.#screenQuadScene, this.#camera)

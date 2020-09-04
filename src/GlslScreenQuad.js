@@ -17,19 +17,30 @@ void main() {
 }
 `
   let fs = `
-uniform sampler2D image;
-uniform vec2 horizontalRange;
+uniform sampler2D imageLeft;
+uniform sampler2D imageRight;
+uniform float horizontalPosition;
+uniform int compareMode;
 varying vec2 tc;
 void main() {
-  gl_FragColor = texture2D(image, tc); // vec4(1.0, 0.0, 0.0, tc.x);
-  if (tc.x < horizontalRange[0] || tc.x > horizontalRange[1])
-    discard;
+  vec4 color1 = texture2D(imageLeft, tc);
+  vec4 color2 = texture2D(imageRight, tc);
+  // compareMode: 0 (swipe), 1 (blend)
+  if (compareMode == 0) {
+    gl_FragColor = texture2D(imageLeft, tc);
+    if (tc.x > horizontalPosition)
+      gl_FragColor = texture2D(imageRight, tc);
+  } else {
+    gl_FragColor = mix(color1, color2, horizontalPosition);
+  }
 }
 `
   let mat = new THREE.ShaderMaterial({
     uniforms: {
-      image: { type: 'sampler2D', value: null },
-      horizontalRange: { type: 'vec2', value: new THREE.Vector2(0, 1) }
+      imageLeft: { type: 'sampler2D', value: null },
+      imageRight: { type: 'sampler2D', value: null },
+      horizontalPosition: { type: 'float', value: 1.0 },
+      compareMode: { type: 'int', value: 0 }
     },
     vertexShader: vs,
     fragmentShader: fs,
