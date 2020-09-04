@@ -45,9 +45,11 @@ export default class RViewDoc {
   syncCamera = null
   clippingPlanes = []
   #threeObjectsByRootLayer = null
+  name = ''
 
-  constructor (rhinoDoc) {
+  constructor (rhinoDoc, name) {
     this.rhinoDoc = rhinoDoc
+    this.name = name
     this.three.middleground = new THREE.Scene()
     this.three.foreground = new THREE.Scene()
 
@@ -126,7 +128,7 @@ export default class RViewDoc {
       rhinoDoc = rhino3dm.File3dm.fromByteArray(contents)
     }
     if (rhinoDoc != null) {
-      const doc = new RViewDoc(rhinoDoc)
+      const doc = new RViewDoc(rhinoDoc, name)
       return doc
     }
     return null

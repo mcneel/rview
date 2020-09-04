@@ -16,7 +16,8 @@ let _viewmodel = {
   materialOptions: ['Basic', 'PBR: Carbon Fiber', 'PBR: Chipped Paint Metal',
     'PBR: Scuffed Plastic', 'PBR: Streaked Metal'],
   displayMode: null,
-  comparePosition: 50
+  comparePosition: 50,
+  compareMode: 0
 }
 
 export default class RViewApp {
@@ -85,10 +86,13 @@ export default class RViewApp {
       return false
     }
 
+    if (RViewApp.#compareDoc != null) RViewApp.#compareDoc.dispose()
+    RViewApp.#compareDoc = null
+
     if (asCompare && RViewApp.#activeDoc != null) {
-      if (RViewApp.#compareDoc != null) RViewApp.#compareDoc.dispose()
       RViewApp.#compareDoc = doc
       _viewmodel.compareDocExists = true
+      _viewmodel.title = RViewApp.#activeDoc.name + ' | ' + RViewApp.#compareDoc.name
     } else {
       _viewmodel.title = name
       if (RViewApp.#activeDoc != null) RViewApp.#activeDoc.dispose()
@@ -96,6 +100,7 @@ export default class RViewApp {
     }
 
     _viewmodel.docExists = true
+    _viewmodel.compareDocExists = RViewApp.#compareDoc != null
     // rebuild layers
     _viewmodel.layers = RViewApp.#activeDoc.layers
     if (RViewApp.#compareDoc != null) {
@@ -282,11 +287,11 @@ export default class RViewApp {
     requestAnimationFrame(() => RViewApp.renderLoop())
     // don't draw if there is no pipeline to draw
     if (RViewApp.#displayPipeline == null) return
-
     RViewApp.#displayPipeline.drawFrameBuffer(
       _viewmodel.displayMode,
       RViewApp.#activeDoc,
       RViewApp.#compareDoc,
+      _viewmodel.compareMode,
       _viewmodel.comparePosition)
   }
 }

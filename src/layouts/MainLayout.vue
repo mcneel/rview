@@ -7,21 +7,36 @@
           :flat="!fileDrawerVisible"
           icon="folder"
           :color="!fileDrawerVisible ? '' : 'secondary'"
-        />
+        >
+        <q-tooltip>Open...</q-tooltip>
+        </q-btn>
         <q-btn @click="toggleDrawer(drawers.LAYER)"
           dense
           :flat="!layerDrawerVisible"
           :color="!layerDrawerVisible ? '' : 'secondary'"
           icon="layers"
           :disable="!viewmodel.docExists"
-        />
+        >
+        <q-tooltip>Layers</q-tooltip>
+        </q-btn>
         <q-btn @click="toggleDrawer(drawers.VIEW)"
           dense
           :flat="!viewDrawerVisible"
           :color="!viewDrawerVisible ? '' : 'secondary'"
           icon="aspect_ratio"
           :disable="!viewmodel.docExists"
-        />
+        >
+        <q-tooltip>Display options</q-tooltip>
+        </q-btn>
+        <q-btn @click="toggleDrawer(drawers.COMPARE)"
+          dense
+          :flat="!compareDrawerVisible"
+          :color="!compareDrawerVisible ? '' : 'secondary'"
+          icon="compare"
+          :disable="!viewmodel.compareDocExists"
+        >
+        <q-tooltip>Compare options</q-tooltip>
+        </q-btn>
 
         <q-toolbar-title>
         </q-toolbar-title>
@@ -33,6 +48,12 @@
       <q-list bordered>
         <q-item clickable v-ripple @click="openSample()">
           <q-item-section>Open Sample</q-item-section>
+          <q-item-section avatar>
+            <q-icon name="img:logo.png"/>
+          </q-item-section>
+        </q-item>
+        <q-item clickable v-ripple @click="openCompareSample()">
+          <q-item-section>Open Compare Sample</q-item-section>
           <q-item-section avatar>
             <q-icon name="img:logo.png"/>
           </q-item-section>
@@ -158,6 +179,17 @@
         </q-expansion-item>
       </q-list>
     </q-drawer>
+
+    <q-drawer v-model="compareDrawerVisible" bordered overlay content-class="bg-grey-2">
+      <q-list bordered>
+        <q-item>
+          <q-option-group v-model="viewmodel.compareMode"
+            :options="[{label: 'Swipe Compare', value: 0}, {label: 'Blend Compare', value: 1}]"
+            outlined
+          />
+        </q-item>
+      </q-list>
+    </q-drawer>
     <q-page-container>
       <router-view />
     </q-page-container>
@@ -175,8 +207,9 @@ export default {
       layerDrawerVisible: false,
       fileDrawerVisible: true,
       viewDrawerVisible: false,
+      compareDrawerVisible: false,
       viewmodel: vm,
-      drawers: { FILE: 1, LAYER: 2, VIEW: 3 },
+      drawers: { FILE: 1, LAYER: 2, VIEW: 3, COMPARE: 4 },
       backgroundModes: DisplayMode.backgroundModes,
       currentDisplayModeName: vm.displayMode.name
     }
@@ -195,6 +228,7 @@ export default {
       this.fileDrawerVisible = (drawer === this.drawers.FILE) ? !this.fileDrawerVisible : false
       this.layerDrawerVisible = (drawer === this.drawers.LAYER) ? !this.layerDrawerVisible : false
       this.viewDrawerVisible = (drawer === this.drawers.VIEW) ? !this.viewDrawerVisible : false
+      this.compareDrawerVisible = (drawer === this.drawers.COMPARE) ? !this.compareDrawerVisible : false
     },
     openSample () {
       fetch('rhino_logo.3dm').then((res) => {
@@ -202,6 +236,22 @@ export default {
         bufferPromise.then((buffer) => {
           RViewApp.openFile('RhinoLogo.3dm', new Uint8Array(buffer))
           this.fileDrawerVisible = false
+        })
+      })
+    },
+    openCompareSample () {
+      let fetchComparePromise = fetch('rhino_logo_twisted.3dm')
+      fetch('rhino_logo.3dm').then((res) => {
+        let bufferPromise = res.arrayBuffer()
+        bufferPromise.then((buffer) => {
+          RViewApp.openFile('RhinoLogo.3dm', new Uint8Array(buffer))
+          fetchComparePromise.then((res) => {
+            bufferPromise = res.arrayBuffer()
+            bufferPromise.then((buffer) => {
+              RViewApp.openFile('RhinoLogoTwisted.3dm', new Uint8Array(buffer), true)
+              this.fileDrawerVisible = false
+            })
+          })
         })
       })
     },
@@ -214,7 +264,6 @@ export default {
         let reader = new FileReader()
         reader.onload = function (e) {
           var contents = e.target.result
-          console.log('hererererere')
           const openSuccess = RViewApp.openFile(file.name, contents, asCompare)
           document.body.removeChild(fileInput)
           if (openSuccess) localVM.fileDrawerVisible = false
