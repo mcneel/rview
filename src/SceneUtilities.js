@@ -27,7 +27,7 @@ function curveToPoints (curve, pointLimit) {
     let segmentCount = curve.segmentCount
     for (let i = 0; i < segmentCount; i++) {
       let segment = curve.segmentCurve(i)
-      let segmentArray = curveToPoints(segment)
+      let segmentArray = curveToPoints(segment, pointCount)
       rc = rc.concat(segmentArray)
       segment.delete()
     }
