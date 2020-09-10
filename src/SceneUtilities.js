@@ -319,12 +319,32 @@ let SceneUtilities = {
         {
           // We can do something smarter in the future. For now just
           // make a level 3 mesh
+          // let wiremesh = rhino3dm.Mesh.createFromSubDControlNet(geometry)
           geometry.subdivide(3)
           let mesh = rhino3dm.Mesh.createFromSubDControlNet(geometry)
           let materialId = getMaterialId(doc, attributes)
           let threeMesh = this.meshToThreejs(mesh, color, materialId)
           objectsToAdd.push([threeMesh, geometry.getBoundingBox()])
           mesh.delete()
+
+          // This will create the base control net wires. Not too pretty yet
+          /*
+          let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
+          let linelist = new GlslLineList(true)
+          let edges = wiremesh.topologyEdges()
+          for (let edgeIndex = 0; edgeIndex < edges.count; edgeIndex++) {
+            let edge = edges.edgeLine(edgeIndex)
+            let points = [edge.from, edge.to]
+            edge.delete()
+            linelist.addPolyline(points, threecolor, 1.4)
+          }
+          let wires = linelist.createThreeObject()
+          wires.userData['surfaceWires'] = true
+          // let wires = this.meshWiresToThreejs(wiremesh, color)
+          objectsToAdd.push([wires, geometry.getBoundingBox()])
+          edges.delete()
+          wiremesh.delete()
+          */
         }
         break
       case rhino3dm.ObjectType.ClipPlane:

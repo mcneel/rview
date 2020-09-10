@@ -240,15 +240,15 @@ export default {
       })
     },
     openCompareSample () {
-      let fetchComparePromise = fetch('rhino_logo_twisted.3dm')
+      let fetchComparePromise = fetch('rhino_logo_subd.3dm')
       fetch('rhino_logo.3dm').then((res) => {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
-          RViewApp.openFile('RhinoLogo.3dm', new Uint8Array(buffer))
+          RViewApp.openFile('rhino_logo.3dm', new Uint8Array(buffer))
           fetchComparePromise.then((res) => {
             bufferPromise = res.arrayBuffer()
             bufferPromise.then((buffer) => {
-              RViewApp.openFile('RhinoLogoTwisted.3dm', new Uint8Array(buffer), true)
+              RViewApp.openFile('rhino_logo_subd.3dm', new Uint8Array(buffer), true)
               this.fileDrawerVisible = false
             })
           })
