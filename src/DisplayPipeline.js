@@ -89,9 +89,9 @@ export default class DisplayPipeline {
     if (compareDocument != null) {
       if (compareDocument.syncCamera == null) {
         compareDocument.syncCamera = this.#camera.clone()
-        compareDocument.three.middleground.add(this.#camera.clone())
+        compareDocument.three.middleground.add(compareDocument.syncCamera)
       }
-      compareDocument.syncCamera.copy(this.#camera, true)
+      compareDocument.syncCamera.copy(this.#camera, false)
       this.drawMiddlegroundToTexture(1, compareDocument.three.middleground)
       this.#screenQuad.material.uniforms.imageRight.value = this.#middlegroundTexture[1].texture
     } else {

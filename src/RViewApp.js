@@ -168,7 +168,7 @@ export default class RViewApp {
       }
     }
 
-    RViewApp.applyMaterial2(name === 'Rendered')
+    // RViewApp.applyMaterial2(name === 'Rendered')
 
     if (performRegen) {
       RViewApp.updateVisibility()
