@@ -16,6 +16,7 @@ export default class DisplayPipeline {
   #middlegroundTexture = [null, null]
   #screenQuad = null
   #screenQuadScene = new THREE.Scene()
+  #previousDrawCamera = null // save the camera state every frame for caching purposes
 
   constructor (parentElement) {
     console.log('create pipeline')
