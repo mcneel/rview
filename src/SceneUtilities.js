@@ -316,7 +316,16 @@ let SceneUtilities = {
         console.warn('TODO: Implement hatch')
         break
       case rhino3dm.ObjectType.SubD:
-        console.warn('TODO: Implement SubD')
+        {
+          // We can do something smarter in the future. For now just
+          // make a level 3 mesh
+          geometry.subdivide(3)
+          let mesh = rhino3dm.Mesh.createFromSubDControlNet(geometry)
+          let materialId = getMaterialId(doc, attributes)
+          let threeMesh = this.meshToThreejs(mesh, color, materialId)
+          objectsToAdd.push([threeMesh, geometry.getBoundingBox()])
+          mesh.delete()
+        }
         break
       case rhino3dm.ObjectType.ClipPlane:
         let normal = geometry.normalAt(0, 0)
