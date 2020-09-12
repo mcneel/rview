@@ -46,6 +46,7 @@ export default class RViewDoc {
   clippingPlanes = []
   #threeObjectsByRootLayer = null
   name = ''
+  disposableResources = []
 
   constructor (rhinoDoc, name) {
     this.rhinoDoc = rhinoDoc
@@ -105,6 +106,8 @@ export default class RViewDoc {
             this.clippingPlanes.push(threeGeometry)
             break
           default:
+            if (threeGeometry.geometry) this.disposableResources.push(threeGeometry.geometry)
+            if (threeGeometry.material) this.disposableResources.push(threeGeometry.material)
             this.three.middleground.add(threeGeometry)
             break
         }
@@ -138,14 +141,12 @@ export default class RViewDoc {
     if (this.rhinoDoc != null) this.rhinoDoc.delete()
     this.rhinoDoc = null
 
-    if (this.three.middleground) {
-      this.three.middleground.dispose()
-      this.three.middleground = null
-    }
-    if (this.three.foreground) {
-      this.three.foreground.dispose()
-      this.three.foreground = null
-    }
+    this.disposableResources.forEach((obj) => {
+      obj.dispose()
+    })
+    this.disposableResources = []
+    this.three.middleground = null
+    this.three.foreground = null
   }
 
   getSceneObjectDictionary () {
