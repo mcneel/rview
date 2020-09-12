@@ -17,7 +17,6 @@ function ghostedDisplayMode () {
 
 function renderedDisplayMode () {
   let mode = new Mode('Rendered')
-  mode.showGrid = false
   mode.showSurfaceWires = false
   return mode
 }
@@ -25,7 +24,6 @@ function renderedDisplayMode () {
 class Mode {
   constructor (name = null) {
     this.name = name
-    this.showGrid = true
     this.backgroundStyle = 'Single Color'
     this.backgroundColor = 'rgb(157,163,170)'
     this.backgroundGradientTop = 'rgb(54,109,168)'
