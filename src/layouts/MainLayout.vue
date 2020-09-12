@@ -40,10 +40,23 @@
         <q-item>
           <q-item-section>Model 1</q-item-section>
         </q-item>
-        <q-item :inset-level="0.3" clickable v-ripple @click="openSample('rhino_logo.3dm', true)">
+        <q-item :inset-level="0.3">
           <q-item-section>Open Sample</q-item-section>
           <q-item-section avatar>
-            <q-icon name="img:logo.png"/>
+            <q-btn-dropdown icon="img:logo.png">
+              <q-list>
+                <q-item v-for="sample in sampleModels"
+                  :key="sample"
+                  clickable
+                  v-close-popup
+                  @click="openSample(sample, true)"
+                >
+                  <q-item-section>
+                    <q-item-label>{{sample}}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
           </q-item-section>
         </q-item>
         <q-item :inset-level="0.3" clickable v-ripple @click="openFile(false)">
@@ -57,10 +70,23 @@
         <q-item :disable="!model1Exists">
           <q-item-section>Model 2</q-item-section>
         </q-item>
-        <q-item :inset-level="0.3" clickable v-ripple :disable="!model1Exists" @click="openSample('rhino_logo_subd.3dm', false)">
+        <q-item :inset-level="0.3" :disable="!model1Exists">
           <q-item-section>Open Sample</q-item-section>
           <q-item-section avatar>
-            <q-icon name="img:logo.png"/>
+            <q-btn-dropdown icon="img:logo.png">
+              <q-list>
+                <q-item v-for="sample in sampleModels"
+                  :key="sample"
+                  clickable
+                  v-close-popup
+                  @click="openSample(sample, false)"
+                >
+                  <q-item-section>
+                    <q-item-label>{{sample}}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
           </q-item-section>
         </q-item>
         <q-item :inset-level="0.3" clickable v-ripple :disable="!model1Exists" @click="openFile(true)">
@@ -181,6 +207,17 @@ export default {
     model1Exists () {
       return this.viewmodel.model1.exists
     },
+    sampleModels () {
+      return [
+        'Clip.3dm',
+        'Drill.3dm',
+        'RhinoLogo.3dm',
+        'RhinoLogoSubD.3dm',
+        'Ring.3dm',
+        'Teacup.3dm',
+        'Teapots.3dm'
+      ]
+    },
     title () {
       let t = RViewApp.applicationTitle()
       if (this.viewmodel.model1.name.length > 0) {
@@ -199,7 +236,8 @@ export default {
       this.viewDrawerVisible = (drawer === this.drawers.VIEW) ? !this.viewDrawerVisible : false
     },
     openSample (name, asModel1) {
-      fetch(name).then((res) => {
+      const path = 'samples/' + name
+      fetch(path).then((res) => {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
           RViewApp.openFile(name, new Uint8Array(buffer), !asModel1)
