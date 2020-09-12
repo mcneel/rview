@@ -103,12 +103,12 @@
         </q-item>
         <q-item :inset-level="0.3">
           <q-item-section>
-            <q-select v-model="currentDisplayModeName"
+            <q-select v-model="model1DisplayModeName"
               outlined
               dense
               options-dense
               :options="displayModeNames"
-              @input="setActiveDisplayMode(currentDisplayModeName, true)"/>
+              @input="setActiveDisplayMode(model1DisplayModeName, true)"/>
           </q-item-section>
         </q-item>
       </q-list>
@@ -118,12 +118,12 @@
         </q-item>
         <q-item :inset-level="0.3">
           <q-item-section>
-            <q-select v-model="currentDisplayModeName"
+            <q-select v-model="model2DisplayModeName"
               outlined
               dense
               options-dense
               :options="displayModeNames"
-              @input="setActiveDisplayMode(currentDisplayModeName, false)"/>
+              @input="setActiveDisplayMode(model2DisplayModeName, false)"/>
           </q-item-section>
         </q-item>
       </q-list>
@@ -139,7 +139,7 @@
           </q-item-section>
         </q-item>
         <q-item v-if="viewmodel.model2Exists" :inset-level="0.3">
-          <q-option-group
+          <q-option-group v-model="viewmodel.compareMode"
             :options="[{label: 'Swipe Compare', value: 0}, {label: 'Blend Compare', value: 1}]"
             outlined
           />
@@ -166,7 +166,8 @@ export default {
       viewmodel: vm,
       drawers: { FILE: 1, LAYER: 2, VIEW: 3 },
       backgroundModes: DisplayMode.backgroundModes,
-      currentDisplayModeName: vm.displayMode.name
+      model1DisplayModeName: vm.model1.displayMode.name,
+      model2DisplayModeName: vm.model2.displayMode.name
     }
   },
   computed: {

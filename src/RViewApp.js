@@ -1,5 +1,3 @@
-import * as THREE from 'three'
-import SceneUtilities from './SceneUtilities'
 import DisplayMode from './DisplayMode'
 import DisplayPipeline from './DisplayPipeline'
 import RViewDoc from './RViewDoc'
@@ -12,7 +10,6 @@ let _viewmodel = {
   layers: [],
   perspectiveCamera: true,
   showGrid: true,
-  displayMode: null,
   comparePosition: 50,
   compareMode: 0
 }
@@ -34,7 +31,8 @@ export default class RViewApp {
    * @param {function} endwait function to end wait UI
    */
   static init (rh3dm, startwait, endwait) {
-    RViewApp.setActiveDisplayMode('Shaded', true, false)
+    RViewApp.setActiveDisplayMode('Shaded', true, false) // set both to shaded to start
+    RViewApp.setActiveDisplayMode('Shaded', false, false) // set both to shaded to start
     if (RViewApp.#rhino3dm == null) {
       let rhino3dmPromise = rh3dm()
       console.log('start loading rhino3dm')
@@ -147,13 +145,22 @@ export default class RViewApp {
 
   static updateVisibility () {
     _viewmodel.layers.forEach((layer) => {
-      RViewApp.getSceneObjectsOnLayer(layer.label).forEach((obj) => {
+      RViewApp.getSceneObjectsOnLayer(layer.label, true, false).forEach((obj) => {
         obj.visible = layer.visible
         if (obj.visible && obj.type === 'Mesh') {
-          obj.visible = _viewmodel.displayMode.showSurfaceMeshes
+          obj.visible = _viewmodel.model1.displayMode.showSurfaceMeshes
         }
         if (obj.visible && obj.userData['surfaceWires']) {
-          obj.visible = _viewmodel.displayMode.showSurfaceWires
+          obj.visible = _viewmodel.model1.displayMode.showSurfaceWires
+        }
+      })
+      RViewApp.getSceneObjectsOnLayer(layer.label, false, true).forEach((obj) => {
+        obj.visible = layer.visible
+        if (obj.visible && obj.type === 'Mesh') {
+          obj.visible = _viewmodel.model2.displayMode.showSurfaceMeshes
+        }
+        if (obj.visible && obj.userData['surfaceWires']) {
+          obj.visible = _viewmodel.model2.displayMode.showSurfaceWires
         }
       })
     })
@@ -164,93 +171,31 @@ export default class RViewApp {
 
     for (let i = 0; i < RViewApp.#displayModes.length; i++) {
       if (RViewApp.#displayModes[i].name === name) {
-        _viewmodel.displayMode = RViewApp.#displayModes[i]
+        if (forModel1) {
+          _viewmodel.model1.displayMode = RViewApp.#displayModes[i]
+        } else {
+          _viewmodel.model2.displayMode = RViewApp.#displayModes[i]
+        }
         break
       }
     }
-
-    // RViewApp.applyMaterial2(name === 'Rendered')
 
     if (performRegen) {
       RViewApp.updateVisibility()
     }
   }
 
-  static applyMaterial (material) {
-    _viewmodel.layers.forEach((layer) => {
-      let objects = RViewApp.getSceneObjectsOnLayer(layer.label)
-      if (objects != null) {
-        objects.forEach((obj) => {
-          if (obj.type === 'Mesh' && obj.userData['diffuse']) {
-            if (obj.material) {
-              obj.material.dispose()
-              obj.material = null
-            }
-            if (material == null) {
-              let diffuse = obj.userData['diffuse']
-              obj.material = new THREE.MeshPhongMaterial({
-                color: diffuse,
-                side: THREE.DoubleSide
-              })
-              if (_viewmodel.displayMode.transparency) {
-                obj.material.opacity = _viewmodel.displayMode.transparency
-                obj.material.transparent = true
-              }
-            } else {
-              obj.material = material
-            }
-          }
-        })
-      }
-    })
-  }
-  static applyMaterial2 (useRenderMaterial) {
-    console.log('apply materials')
-    _viewmodel.layers.forEach((layer) => {
-      let objects = RViewApp.getSceneObjectsOnLayer(layer.label)
-      if (objects != null) {
-        objects.forEach((obj) => {
-          if (obj.type === 'Mesh' && obj.userData['diffuse']) {
-            if (obj.material) {
-              obj.material.dispose()
-              obj.material = null
-            }
-
-            if (useRenderMaterial) {
-              let id = obj.userData['materialId']
-              let materials = RViewApp.#document1.rhinoDoc.materials()
-              let material = materials.findId(id)
-              obj.material = SceneUtilities.createThreeMaterial(material, RViewApp.#document1.rhinoDoc)
-              material.delete()
-              materials.delete()
-            }
-            if (obj.material == null) {
-              let diffuse = obj.userData['diffuse']
-              obj.material = new THREE.MeshPhongMaterial({
-                color: diffuse,
-                side: THREE.DoubleSide
-              })
-              if (_viewmodel.displayMode.transparency) {
-                obj.material.opacity = _viewmodel.displayMode.transparency
-                obj.material.transparent = true
-              }
-            }
-          }
-        })
-      }
-    })
-  }
   static getActiveModel () {
     return RViewApp.#document1
   }
 
-  static getSceneObjectsOnLayer (rootLayerName) {
+  static getSceneObjectsOnLayer (rootLayerName, forModel1, forModel2) {
     let objects = []
-    if (RViewApp.#document1 != null) {
+    if (RViewApp.#document1 != null && forModel1) {
       const activeDocObjects = RViewApp.#document1.getSceneObjectsOnLayer(rootLayerName)
       if (activeDocObjects != null) objects = objects.concat(activeDocObjects)
     }
-    if (RViewApp.#document2 != null) {
+    if (RViewApp.#document2 != null && forModel2) {
       const compareDocObjects = RViewApp.#document2.getSceneObjectsOnLayer(rootLayerName)
       if (compareDocObjects != null) objects = objects.concat(compareDocObjects)
     }
@@ -263,7 +208,7 @@ export default class RViewApp {
       if (!layer.visible) {
         return
       }
-      let objects = RViewApp.getSceneObjectsOnLayer(layer.label)
+      let objects = RViewApp.getSceneObjectsOnLayer(layer.label, true, true)
       if (objects == null) {
         return
       }
@@ -290,7 +235,7 @@ export default class RViewApp {
     if (RViewApp.#displayPipeline == null) return
     RViewApp.#displayPipeline.drawFrameBuffer(
       _viewmodel.showGrid,
-      _viewmodel.displayMode,
+      _viewmodel.model1.displayMode,
       RViewApp.#document1,
       RViewApp.#document2,
       _viewmodel.compareMode,
