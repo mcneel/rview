@@ -6,15 +6,12 @@ import RViewDoc from './RViewDoc'
 
 let _cachedDoc = null
 let _viewmodel = {
-  docExists: false,
-  compareDocExists: false,
-  title: 'rview WIP',
+  model1: { exists: false, name: '', displayMode: null },
+  model2: { exists: false, name: '', displayMode: null },
   expanded: ['Layers'],
   layers: [],
   perspectiveCamera: true,
-  currentMaterialStyle: 'Basic',
-  materialOptions: ['Basic', 'PBR: Carbon Fiber', 'PBR: Chipped Paint Metal',
-    'PBR: Scuffed Plastic', 'PBR: Streaked Metal'],
+  showGrid: true,
   displayMode: null,
   comparePosition: 50,
   compareMode: 0
@@ -24,8 +21,8 @@ export default class RViewApp {
   static #rhino3dm = null // rhino3dm.js wasm library (needs to be loaded async)
   static #displayPipeline = null
   static #glElementId = '' // parent DOM element id for WebGL control
-  static #activeDoc = null // document we are viewing
-  static #compareDoc = null // 2nd document for comparison with active doc
+  static #document1 = null // main document we are viewing
+  static #document2 = null // 2nd document for comparison with main doc
   static #displayModes = DisplayMode.defaultModes()
 
   /**
@@ -37,7 +34,7 @@ export default class RViewApp {
    * @param {function} endwait function to end wait UI
    */
   static init (rh3dm, startwait, endwait) {
-    RViewApp.setActiveDisplayMode('Shaded', false)
+    RViewApp.setActiveDisplayMode('Shaded', true, false)
     if (RViewApp.#rhino3dm == null) {
       let rhino3dmPromise = rh3dm()
       console.log('start loading rhino3dm')
@@ -54,6 +51,10 @@ export default class RViewApp {
         }
       })
     }
+  }
+
+  static applicationTitle () {
+    return 'rview WIP'
   }
 
   /**
@@ -86,34 +87,34 @@ export default class RViewApp {
       return false
     }
 
-    if (RViewApp.#compareDoc != null) RViewApp.#compareDoc.dispose()
-    RViewApp.#compareDoc = null
+    if (RViewApp.#document2 != null) RViewApp.#document2.dispose()
+    RViewApp.#document2 = null
 
-    if (asCompare && RViewApp.#activeDoc != null) {
-      RViewApp.#compareDoc = doc
-      _viewmodel.compareDocExists = true
-      _viewmodel.title = RViewApp.#activeDoc.name + ' | ' + RViewApp.#compareDoc.name
+    if (asCompare && RViewApp.#document1 != null) {
+      RViewApp.#document2 = doc
+      _viewmodel.model2Exists = true
     } else {
-      _viewmodel.title = name
-      if (RViewApp.#activeDoc != null) RViewApp.#activeDoc.dispose()
-      RViewApp.#activeDoc = doc
+      if (RViewApp.#document1 != null) RViewApp.#document1.dispose()
+      RViewApp.#document1 = doc
     }
 
-    _viewmodel.docExists = true
-    _viewmodel.compareDocExists = RViewApp.#compareDoc != null
+    _viewmodel.model1.exists = true
+    _viewmodel.model1.name = RViewApp.#document1.name
+    _viewmodel.model2.exists = RViewApp.#document2 != null
+    _viewmodel.model2.name = RViewApp.#document2 != null ? RViewApp.#document2.name : ''
     // rebuild layers
-    _viewmodel.layers = RViewApp.#activeDoc.layers
-    if (RViewApp.#compareDoc != null) {
+    _viewmodel.layers = RViewApp.#document1.layers
+    if (RViewApp.#document2 != null) {
       let compareList = []
-      for (let i = 0; i < RViewApp.#compareDoc.layers.length; i++) {
+      for (let i = 0; i < RViewApp.#document2.layers.length; i++) {
         let addToList = true
         for (let j = 0; j < _viewmodel.layers.length; j++) {
-          if (_viewmodel.layers[j].label === RViewApp.#compareDoc.layers[i].label) {
+          if (_viewmodel.layers[j].label === RViewApp.#document2.layers[i].label) {
             addToList = false
             break
           }
         }
-        if (addToList) compareList.push(RViewApp.#compareDoc.layers[i])
+        if (addToList) compareList.push(RViewApp.#document2.layers[i])
       }
       _viewmodel.layers = _viewmodel.layers.concat(compareList)
     }
@@ -158,7 +159,7 @@ export default class RViewApp {
     })
   }
 
-  static setActiveDisplayMode (name, performRegen = true) {
+  static setActiveDisplayMode (name, forModel1, performRegen = true) {
     if (RViewApp.#displayModes == null) RViewApp.#displayModes = DisplayMode.defaultModes()
 
     for (let i = 0; i < RViewApp.#displayModes.length; i++) {
@@ -217,9 +218,9 @@ export default class RViewApp {
 
             if (useRenderMaterial) {
               let id = obj.userData['materialId']
-              let materials = RViewApp.#activeDoc.rhinoDoc.materials()
+              let materials = RViewApp.#document1.rhinoDoc.materials()
               let material = materials.findId(id)
-              obj.material = SceneUtilities.createThreeMaterial(material, RViewApp.#activeDoc.rhinoDoc)
+              obj.material = SceneUtilities.createThreeMaterial(material, RViewApp.#document1.rhinoDoc)
               material.delete()
               materials.delete()
             }
@@ -240,17 +241,17 @@ export default class RViewApp {
     })
   }
   static getActiveModel () {
-    return RViewApp.#activeDoc
+    return RViewApp.#document1
   }
 
   static getSceneObjectsOnLayer (rootLayerName) {
     let objects = []
-    if (RViewApp.#activeDoc != null) {
-      const activeDocObjects = RViewApp.#activeDoc.getSceneObjectsOnLayer(rootLayerName)
+    if (RViewApp.#document1 != null) {
+      const activeDocObjects = RViewApp.#document1.getSceneObjectsOnLayer(rootLayerName)
       if (activeDocObjects != null) objects = objects.concat(activeDocObjects)
     }
-    if (RViewApp.#compareDoc != null) {
-      const compareDocObjects = RViewApp.#compareDoc.getSceneObjectsOnLayer(rootLayerName)
+    if (RViewApp.#document2 != null) {
+      const compareDocObjects = RViewApp.#document2.getSceneObjectsOnLayer(rootLayerName)
       if (compareDocObjects != null) objects = objects.concat(compareDocObjects)
     }
     return objects
@@ -288,9 +289,10 @@ export default class RViewApp {
     // don't draw if there is no pipeline to draw
     if (RViewApp.#displayPipeline == null) return
     RViewApp.#displayPipeline.drawFrameBuffer(
+      _viewmodel.showGrid,
       _viewmodel.displayMode,
-      RViewApp.#activeDoc,
-      RViewApp.#compareDoc,
+      RViewApp.#document1,
+      RViewApp.#document2,
       _viewmodel.compareMode,
       _viewmodel.comparePosition)
   }

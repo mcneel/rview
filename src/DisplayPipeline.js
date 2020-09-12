@@ -45,7 +45,7 @@ export default class DisplayPipeline {
     this.#screenQuadScene.add(this.#screenQuad)
   }
 
-  drawFrameBuffer (displayMode, baseDocument, compareDocument, compareMode, comparePosition) {
+  drawFrameBuffer (showGrid, displayMode, baseDocument, compareDocument, compareMode, comparePosition) {
     if (compareDocument == null) comparePosition = 100
     let viewportWidth = this.#parentElement.clientWidth
     let viewportHeight = this.#parentElement.clientHeight
@@ -79,7 +79,7 @@ export default class DisplayPipeline {
     this.#renderer.sortObjects = false
     // background draw will still clear the depth/color buffer
     // since the background scene defines a background fill color
-    this.drawBackground(displayMode)
+    this.drawBackground(showGrid, displayMode)
     this.drawMiddlegroundToTexture(0, baseDocument.three.middleground)
     this.#screenQuad.material.uniforms.imageLeft.value = this.#middlegroundTexture[0].texture
     const x = comparePosition / 100.0
@@ -110,7 +110,7 @@ export default class DisplayPipeline {
     */
   }
 
-  drawBackground (displayMode) {
+  drawBackground (showGrid, displayMode) {
     // Draw background color and grid based on passed in display mode
     if (displayMode.backgroundStyle === DisplayMode.backgroundModes[0]) {
       // single color
@@ -132,7 +132,7 @@ export default class DisplayPipeline {
       this.#backgroundScene.grid = SceneUtilities.createGrid()
       this.#backgroundScene.add(this.#backgroundScene.grid)
     }
-    this.#backgroundScene.grid.visible = displayMode.showGrid
+    this.#backgroundScene.grid.visible = showGrid
 
     this.#renderer.render(this.#backgroundScene, this.#camera)
   }

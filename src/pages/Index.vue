@@ -52,13 +52,13 @@ export default {
   },
   computed: {
     docExists () {
-      return RViewApp.viewModel().docExists
+      return this.viewmodel.model1.exists
     },
     perspectiveCamera () {
-      return RViewApp.viewModel().perspectiveCamera
+      return this.viewmodel.perspectiveCamera
     },
     showCompareSlider () {
-      return this.viewmodel.docExists && this.viewmodel.compareDocExists
+      return this.viewmodel.model1.exists && this.viewmodel.model2.exists
     }
   },
   created () {
