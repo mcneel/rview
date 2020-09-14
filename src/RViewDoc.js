@@ -75,19 +75,28 @@ export default class RViewDoc {
   buildSceneHelper () {
     const doc = this.rhinoDoc
     let objects = doc.objects()
+    let objectsByLayer = {}
     for (let i = 0; i < objects.count; i++) {
       let modelObject = objects.get(i)
-      if (modelObject == null) {
-        continue
-      }
+      if (modelObject == null) continue
       let geometry = modelObject.geometry()
       let attr = modelObject.attributes()
+      modelObject.delete()
       if (attr.isInstanceDefinitionObject) {
+        geometry.delete()
+        attr.delete()
+        modelObject.delete()
         continue
       }
-      let layer = doc.layers().get(attr.layerIndex)
-      let objectsToAdd = SceneUtilities.createThreeGeometry(geometry, attr, doc)
+      const layerIndex = attr.layerIndex
+      if (!objectsByLayer.hasOwnProperty(layerIndex)) objectsByLayer[layerIndex] = []
+      objectsByLayer[layerIndex].push([geometry, attr])
+    }
 
+    for (const key in objectsByLayer) {
+      const itemsOnLayer = objectsByLayer[key]
+      let layer = doc.layers().get(parseInt(key))
+      let objectsToAdd = SceneUtilities.createThreeGeometryOnLayer(itemsOnLayer, doc, this.disposableResources)
       objectsToAdd.forEach((obj) => {
         let threeGeometry = obj[0]
         let bbox = obj[1]
@@ -106,15 +115,10 @@ export default class RViewDoc {
             this.clippingPlanes.push(threeGeometry)
             break
           default:
-            if (threeGeometry.geometry) this.disposableResources.push(threeGeometry.geometry)
-            if (threeGeometry.material) this.disposableResources.push(threeGeometry.material)
             this.three.middleground.add(threeGeometry)
             break
         }
       })
-      modelObject.delete()
-      geometry.delete()
-      attr.delete()
     }
     objects.delete()
   }
