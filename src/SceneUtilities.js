@@ -140,6 +140,7 @@ let SceneUtilities = {
       verts[i * 6 + 3] = line.to[0]
       verts[i * 6 + 4] = line.to[1]
       verts[i * 6 + 5] = line.to[2]
+      line.delete()
     }
     edges.delete()
     let points = new THREE.BufferGeometry()
