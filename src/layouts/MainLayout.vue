@@ -111,46 +111,38 @@
     </q-drawer>
 
     <q-drawer v-model="viewDrawerVisible" bordered overlay content-class="bg-grey-2">
-      <q-list bordered>
-        <q-item v-if="viewmodel.model2Exists">
-          <q-item-section>Model 1</q-item-section>
+      <q-list bordered dense>
+        <q-item>
+          <q-item-section v-if="viewmodel.model2Exists">Model 1</q-item-section>
+          <q-item-section v-else>Show</q-item-section>
         </q-item>
         <q-item :inset-level="0.3">
-          <q-item-section>
-            <q-select v-model="model1DisplayModeName"
-              outlined
-              dense
-              options-dense
-              :options="displayModeNames"
-              @input="setActiveDisplayMode(model1DisplayModeName, true)"/>
-          </q-item-section>
+          <q-toggle label="Wires" v-model="viewmodel.model1.displayAttrs.wires" @input="updateVisibility()"/>
+        </q-item>
+        <q-item :inset-level="0.3">
+          <q-toggle label="Shading" v-model="viewmodel.model1.displayAttrs.shading" @input="updateVisibility()"/>
         </q-item>
       </q-list>
-      <q-list v-if="viewmodel.model2Exists">
+      <q-list dense v-if="viewmodel.model2Exists">
         <q-item>
           <q-item-section>Model 2</q-item-section>
         </q-item>
         <q-item :inset-level="0.3">
-          <q-item-section>
-            <q-select v-model="model2DisplayModeName"
-              outlined
-              dense
-              options-dense
-              :options="displayModeNames"
-              @input="setActiveDisplayMode(model2DisplayModeName, false)"/>
-          </q-item-section>
+          <q-toggle label="Wires" v-model="viewmodel.model2.displayAttrs.wires" @input="updateVisibility()"/>
+        </q-item>
+        <q-item :inset-level="0.3">
+          <q-toggle label="Shading" v-model="viewmodel.model2.displayAttrs.shading" @input="updateVisibility()"/>
         </q-item>
       </q-list>
-      <q-list bordered>
+      <q-list dense bordered>
         <q-item v-if="viewmodel.model2Exists">
           <q-item-section>General</q-item-section>
         </q-item>
-        <q-item dense :inset-level="0.3">
-          <q-item-section avatar><q-icon name="grid_on"/></q-item-section>
-          <q-item-section><q-item-label>Grid</q-item-label></q-item-section>
-          <q-item-section side>
-            <q-toggle v-model="viewmodel.showGrid" @input="updateVisibility()"/>
+        <q-item :inset-level="0.3">
+          <q-item-section>
+            <q-toggle v-model="viewmodel.showGrid" label="Grid" @input="updateVisibility()"/>
           </q-item-section>
+          <q-item-section avatar><q-icon name="grid_on"/></q-item-section>
         </q-item>
         <q-item v-if="viewmodel.model2Exists" :inset-level="0.3">
           <q-option-group v-model="viewmodel.compareMode"
@@ -179,19 +171,10 @@ export default {
       viewDrawerVisible: false,
       viewmodel: vm,
       drawers: { FILE: 1, LAYER: 2, VIEW: 3 },
-      backgroundModes: DisplayMode.backgroundModes,
-      model1DisplayModeName: vm.model1.displayMode.name,
-      model2DisplayModeName: vm.model2.displayMode.name
+      backgroundModes: DisplayMode.backgroundModes
     }
   },
   computed: {
-    displayModeNames () {
-      let names = []
-      DisplayMode.defaultModes().forEach((mode) => {
-        names.push(mode.name)
-      })
-      return Object.freeze(names)
-    },
     model1Exists () {
       return this.viewmodel.model1.exists
     },
@@ -260,9 +243,6 @@ export default {
       let eventMouse = document.createEvent('MouseEvents')
       eventMouse.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null)
       fileInput.dispatchEvent(eventMouse)
-    },
-    setActiveDisplayMode (name, forModel1) {
-      RViewApp.setActiveDisplayMode(name, forModel1)
     },
     updateVisibility () {
       RViewApp.updateVisibility()
