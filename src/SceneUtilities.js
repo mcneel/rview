@@ -183,9 +183,10 @@ let SceneUtilities = {
     return meshObject
   },
   createThreeGeometryOnLayer (items, doc, disposablesList) {
-    console.log('createonlayer')
     let rhino3dm = RViewApp.getRhino3dm()
+    let deleteList = []
     let materials = doc.materials()
+    deleteList.push(materials)
 
     let objectsToAdd = []
     // attempt to merge as much as possible
@@ -199,6 +200,7 @@ let SceneUtilities = {
           {
             let color = attributes.drawColor(doc)
             let material = materials.findFromAttributes(attributes)
+            deleteList.push(material)
             let faces = geometry.faces()
             for (let faceIndex = 0; faceIndex < faces.count; faceIndex++) {
               let face = faces.get(faceIndex)
@@ -215,6 +217,7 @@ let SceneUtilities = {
           {
             let color = attributes.drawColor(doc)
             let material = materials.findFromAttributes(attributes)
+            deleteList.push(material)
             meshes.push([color, material, geometry])
           }
           break
@@ -226,6 +229,7 @@ let SceneUtilities = {
             let mesh = rhino3dm.Mesh.createFromSubDControlNet(geometry)
             let color = attributes.drawColor(doc)
             let material = materials.findFromAttributes(attributes)
+            deleteList.push(material)
             meshes.push([color, material, mesh])
           }
           break
@@ -235,6 +239,7 @@ let SceneUtilities = {
             if (mesh) {
               let color = attributes.drawColor(doc)
               let material = materials.findFromAttributes(attributes)
+              deleteList.push(material)
               meshes.push([color, material, mesh])
             }
           }
@@ -250,10 +255,13 @@ let SceneUtilities = {
       let bbox = mesh.getBoundingBox()
       for (let j = i + 1; j < meshes.length; j++) {
         let [nextColor, nextMaterial, nextMesh] = meshes[j]
-        if (color.r === nextColor.r && color.g === nextColor.g && color.b === nextColor.b && color.a === nextColor.a && rhino3dm.Material.compareAppearance(material, nextMaterial) === 0) {
+        if (color.r === nextColor.r && color.g === nextColor.g && color.b === nextColor.b && color.a === nextColor.a &&
+          rhino3dm.Material.compareAppearance(material, nextMaterial) === 0) {
           i = j
           mergeMeshes.push(nextMesh)
-          bbox = rhino3dm.BoundingBox.union(bbox, nextMesh.getBoundingBox())
+          let nextbbox = nextMesh.getBoundingBox()
+          deleteList.push(nextbbox)
+          bbox = rhino3dm.BoundingBox.union(bbox, nextbbox)
           continue
         }
         break
@@ -270,6 +278,10 @@ let SceneUtilities = {
       let attrs = items[i][1]
       let abc = this.createThreeGeometry(geometry, attrs, doc, disposablesList, false)
       objectsToAdd = objectsToAdd.concat(abc)
+    }
+
+    for (let i = 0; i < deleteList.length; i++) {
+      deleteList[i].delete()
     }
     return objectsToAdd
   },
