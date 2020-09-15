@@ -5,6 +5,23 @@ import RViewApp from './RViewApp'
 import DisplayMode from './DisplayMode'
 import SceneUtilities from './SceneUtilities'
 
+function camerasSame (cam0, cam1) {
+  if (cam0 == null && cam1 == null) return true
+  if (cam0 == null || cam1 == null) return false
+  const epsilon = 0.0001
+  if (Math.abs(cam0.near - cam1.near) > epsilon) return false
+  if (Math.abs(cam0.far - cam1.far) > epsilon) return false
+  if (Math.abs(cam0.aspect - cam1.aspect) > epsilon) return false
+  for (let i = 0; i < 16; i++) {
+    if (Math.abs(cam0.projectionMatrix[i] - cam1.projectionMatrix[i]) > epsilon) return false
+    if (Math.abs(cam0.matrixWorldInverse[i] - cam1.matrixWorldInverse[i]) > epsilon) return false
+  }
+  if (Math.abs(cam0.rotation.x - cam1.rotation.x) > epsilon) return false
+  if (Math.abs(cam0.rotation.y - cam1.rotation.y) > epsilon) return false
+  if (Math.abs(cam0.rotation.z - cam1.rotation.z) > epsilon) return false
+  return true
+}
+
 export default class DisplayPipeline {
   #renderer = null
   #labelRenderer = null
@@ -17,6 +34,7 @@ export default class DisplayPipeline {
   #screenQuad = null
   #screenQuadScene = new THREE.Scene()
   #previousDrawCamera = null // save the camera state every frame for caching purposes
+  #dirtyFlag = false
 
   constructor (parentElement) {
     console.log('create pipeline')
@@ -45,7 +63,13 @@ export default class DisplayPipeline {
     this.#screenQuadScene.add(this.#screenQuad)
   }
 
+  setDirtyFlag () {
+    this.#dirtyFlag = true
+  }
+
   drawFrameBuffer (showGrid, displayMode, baseDocument, compareDocument, compareMode, comparePosition) {
+    let dirty = this.#dirtyFlag
+    this.#dirtyFlag = false
     if (compareDocument == null) comparePosition = 100
     let viewportWidth = this.#parentElement.clientWidth
     let viewportHeight = this.#parentElement.clientHeight
@@ -53,6 +77,7 @@ export default class DisplayPipeline {
     this.#frameSize = [this.#parentElement.clientWidth, this.#parentElement.clientHeight]
 
     if (windowResize) {
+      dirty = true
       this.#camera.aspect = this.#parentElement.clientWidth / this.#parentElement.clientHeight
       this.#camera.updateProjectionMatrix()
       this.#renderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
@@ -80,7 +105,16 @@ export default class DisplayPipeline {
     // background draw will still clear the depth/color buffer
     // since the background scene defines a background fill color
     this.drawBackground(showGrid, displayMode)
-    this.drawMiddlegroundToTexture(0, baseDocument.three.middleground)
+    if (this.#previousDrawCamera == null) {
+      this.#previousDrawCamera = this.#camera.clone()
+    }
+
+    dirty |= !camerasSame(this.#previousDrawCamera, this.#camera)
+
+    if (dirty) {
+      this.#previousDrawCamera.copy(this.#camera, false)
+      this.drawMiddlegroundToTexture(0, baseDocument.three.middleground)
+    }
     this.#screenQuad.material.uniforms.imageLeft.value = this.#middlegroundTexture[0].texture
     const x = comparePosition / 100.0
     this.#screenQuad.material.uniforms.horizontalPosition.value = x
@@ -92,7 +126,9 @@ export default class DisplayPipeline {
         compareDocument.three.middleground.add(compareDocument.syncCamera)
       }
       compareDocument.syncCamera.copy(this.#camera, false)
-      this.drawMiddlegroundToTexture(1, compareDocument.three.middleground)
+      if (dirty) {
+        this.drawMiddlegroundToTexture(1, compareDocument.three.middleground)
+      }
       this.#screenQuad.material.uniforms.imageRight.value = this.#middlegroundTexture[1].texture
     } else {
       this.#screenQuad.material.uniforms.imageRight.value = this.#middlegroundTexture[0].texture

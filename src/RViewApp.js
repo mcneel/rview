@@ -1,11 +1,11 @@
-import DisplayMode from './DisplayMode'
 import DisplayPipeline from './DisplayPipeline'
 import RViewDoc from './RViewDoc'
+import DisplayMode from './DisplayMode'
 
 let _cachedDoc = null
 let _viewmodel = {
-  model1: { exists: false, name: '', displayMode: null },
-  model2: { exists: false, name: '', displayMode: null },
+  model1: { exists: false, name: '', displayAttrs: { wires: true, shading: true } },
+  model2: { exists: false, name: '', displayAttrs: { wires: true, shading: true } },
   expanded: ['Layers'],
   layers: [],
   perspectiveCamera: true,
@@ -13,6 +13,7 @@ let _viewmodel = {
   comparePosition: 50,
   compareMode: 0
 }
+let _modes = DisplayMode.defaultModes()
 
 export default class RViewApp {
   static #rhino3dm = null // rhino3dm.js wasm library (needs to be loaded async)
@@ -20,7 +21,6 @@ export default class RViewApp {
   static #glElementId = '' // parent DOM element id for WebGL control
   static #document1 = null // main document we are viewing
   static #document2 = null // 2nd document for comparison with main doc
-  static #displayModes = DisplayMode.defaultModes()
 
   /**
    * Called by top level App.vue to initialize rhino3dm wasm library. Web
@@ -31,8 +31,6 @@ export default class RViewApp {
    * @param {function} endwait function to end wait UI
    */
   static init (rh3dm, startwait, endwait) {
-    RViewApp.setActiveDisplayMode('Shaded', true, false) // set both to shaded to start
-    RViewApp.setActiveDisplayMode('Shaded', false, false) // set both to shaded to start
     if (RViewApp.#rhino3dm == null) {
       let rhino3dmPromise = rh3dm()
       console.log('start loading rhino3dm')
@@ -148,41 +146,24 @@ export default class RViewApp {
       RViewApp.getSceneObjectsOnLayer(layer.label, true, false).forEach((obj) => {
         obj.visible = layer.visible
         if (obj.visible && obj.type === 'Mesh') {
-          obj.visible = _viewmodel.model1.displayMode.showSurfaceMeshes
+          obj.visible = _viewmodel.model1.displayAttrs.shading
         }
         if (obj.visible && obj.userData['surfaceWires']) {
-          obj.visible = _viewmodel.model1.displayMode.showSurfaceWires
+          obj.visible = _viewmodel.model1.displayAttrs.wires
         }
       })
       RViewApp.getSceneObjectsOnLayer(layer.label, false, true).forEach((obj) => {
         obj.visible = layer.visible
         if (obj.visible && obj.type === 'Mesh') {
-          obj.visible = _viewmodel.model2.displayMode.showSurfaceMeshes
+          obj.visible = _viewmodel.model2.displayAttrs.shading
         }
         if (obj.visible && obj.userData['surfaceWires']) {
-          obj.visible = _viewmodel.model2.displayMode.showSurfaceWires
+          obj.visible = _viewmodel.model2.displayAttrs.wires
         }
       })
     })
-  }
 
-  static setActiveDisplayMode (name, forModel1, performRegen = true) {
-    if (RViewApp.#displayModes == null) RViewApp.#displayModes = DisplayMode.defaultModes()
-
-    for (let i = 0; i < RViewApp.#displayModes.length; i++) {
-      if (RViewApp.#displayModes[i].name === name) {
-        if (forModel1) {
-          _viewmodel.model1.displayMode = RViewApp.#displayModes[i]
-        } else {
-          _viewmodel.model2.displayMode = RViewApp.#displayModes[i]
-        }
-        break
-      }
-    }
-
-    if (performRegen) {
-      RViewApp.updateVisibility()
-    }
+    if (RViewApp.#displayPipeline != null) RViewApp.#displayPipeline.setDirtyFlag()
   }
 
   static getActiveModel () {
@@ -235,7 +216,7 @@ export default class RViewApp {
     if (RViewApp.#displayPipeline == null) return
     RViewApp.#displayPipeline.drawFrameBuffer(
       _viewmodel.showGrid,
-      _viewmodel.model1.displayMode,
+      _modes[0],
       RViewApp.#document1,
       RViewApp.#document2,
       _viewmodel.compareMode,
