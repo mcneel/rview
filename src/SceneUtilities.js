@@ -151,16 +151,22 @@ let SceneUtilities = {
     return wires
   },
   meshToThreejs (mesh, diffuse, materialId) {
-    let textureCoords = mesh.textureCoordinates()
-    if (textureCoords.count === 0) {
-      let rhino3dm = RViewApp.getRhino3dm()
-      let sphere = new rhino3dm.Sphere([0, 0, 0], 1000)
-      let mapping = rhino3dm.TextureMapping.createSphereMapping(sphere)
-      mesh.setTextureCoordinates(mapping, null, false)
+    let meshes = mesh
+    if (!Array.isArray(mesh)) meshes = [mesh]
+    for (let i = 0; i < meshes.length; i++) {
+      let textureCoords = meshes[i].textureCoordinates()
+      if (textureCoords.count === 0) {
+        let rhino3dm = RViewApp.getRhino3dm()
+        let sphere = new rhino3dm.Sphere([0, 0, 0], 1000)
+        let mapping = rhino3dm.TextureMapping.createSphereMapping(sphere)
+        meshes[i].setTextureCoordinates(mapping, null, false)
+      }
+      textureCoords.delete()
     }
-    textureCoords.delete()
+    let rhino3dm = RViewApp.getRhino3dm()
     let loader = new THREE.BufferGeometryLoader()
-    var geometry = loader.parse(mesh.toThreejsJSON())
+    let data = rhino3dm.Mesh.toThreejsJSONMerged(meshes, false)
+    var geometry = loader.parse(data)
     let diffusecolor = new THREE.Color(diffuse.r / 255.0, diffuse.g / 255.0, diffuse.b / 255.0)
     if (diffuse.r === 0 && diffuse.g === 0 && diffuse.b === 0) {
       diffusecolor.r = 1
@@ -176,7 +182,110 @@ let SceneUtilities = {
     meshObject.userData['materialId'] = materialId
     return meshObject
   },
-  createThreeGeometry (geometry, attributes, doc) {
+  createThreeGeometryOnLayer (items, doc, disposablesList) {
+    let rhino3dm = RViewApp.getRhino3dm()
+    let deleteList = []
+    let materials = doc.materials()
+    deleteList.push(materials)
+
+    let objectsToAdd = []
+    // attempt to merge as much as possible
+    let meshes = []
+    for (let i = 0; i < items.length; i++) {
+      let geometry = items[i][0]
+      let attributes = items[i][1]
+      const objectType = geometry.objectType
+      switch (objectType) {
+        case rhino3dm.ObjectType.Brep:
+          {
+            let color = attributes.drawColor(doc)
+            let material = materials.findFromAttributes(attributes)
+            deleteList.push(material)
+            let faces = geometry.faces()
+            for (let faceIndex = 0; faceIndex < faces.count; faceIndex++) {
+              let face = faces.get(faceIndex)
+              let mesh = face.getMesh(rhino3dm.MeshType.Any)
+              if (mesh) {
+                meshes.push([color, material, mesh])
+              }
+              face.delete()
+            }
+            faces.delete()
+          }
+          break
+        case rhino3dm.ObjectType.Mesh:
+          {
+            let color = attributes.drawColor(doc)
+            let material = materials.findFromAttributes(attributes)
+            deleteList.push(material)
+            meshes.push([color, material, geometry])
+          }
+          break
+        case rhino3dm.ObjectType.SubD:
+          {
+            // We can do something smarter in the future. For now just
+            // make a level 3 mesh
+            geometry.subdivide(3)
+            let mesh = rhino3dm.Mesh.createFromSubDControlNet(geometry)
+            let color = attributes.drawColor(doc)
+            let material = materials.findFromAttributes(attributes)
+            deleteList.push(material)
+            meshes.push([color, material, mesh])
+          }
+          break
+        case rhino3dm.ObjectType.Extrusion:
+          {
+            let mesh = geometry.getMesh(rhino3dm.MeshType.Any)
+            if (mesh) {
+              let color = attributes.drawColor(doc)
+              let material = materials.findFromAttributes(attributes)
+              deleteList.push(material)
+              meshes.push([color, material, mesh])
+            }
+          }
+          break
+        default:
+          break
+      }
+    }
+
+    for (let i = 0; i < meshes.length; i++) {
+      let [color, material, mesh] = meshes[i]
+      let mergeMeshes = [mesh]
+      let bbox = mesh.getBoundingBox()
+      for (let j = i + 1; j < meshes.length; j++) {
+        let [nextColor, nextMaterial, nextMesh] = meshes[j]
+        if (color.r === nextColor.r && color.g === nextColor.g && color.b === nextColor.b && color.a === nextColor.a &&
+          rhino3dm.Material.compareAppearance(material, nextMaterial) === 0) {
+          i = j
+          mergeMeshes.push(nextMesh)
+          let nextbbox = nextMesh.getBoundingBox()
+          deleteList.push(nextbbox)
+          bbox = rhino3dm.BoundingBox.union(bbox, nextbbox)
+          continue
+        }
+        break
+      }
+      let materialId = material.id
+      let threeMesh = this.meshToThreejs(mergeMeshes, color, materialId)
+      disposablesList.push(threeMesh.geometry)
+      disposablesList.push(threeMesh.material)
+      objectsToAdd.push([threeMesh, bbox])
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      let geometry = items[i][0]
+      let attrs = items[i][1]
+      let abc = this.createThreeGeometry(geometry, attrs, doc, disposablesList, false)
+      objectsToAdd = objectsToAdd.concat(abc)
+    }
+
+    for (let i = 0; i < deleteList.length; i++) {
+      deleteList[i].delete()
+    }
+    return objectsToAdd
+  },
+  createThreeGeometry (geometry, attributes, doc, disposablesList, createMeshes) {
     let rhino3dm = RViewApp.getRhino3dm()
     let objectsToAdd = []
     let color = attributes.drawColor(doc)
@@ -188,6 +297,8 @@ let SceneUtilities = {
           let pointGeometry = new THREE.Geometry()
           let pt = geometry.location
           pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
+          disposablesList.push(pointMaterial)
+          disposablesList.push(pointGeometry)
           objectsToAdd.push([new THREE.Points(pointGeometry, pointMaterial), geometry.getBoundingBox()])
         }
         break
@@ -195,6 +306,8 @@ let SceneUtilities = {
         {
           let pointMaterial = new THREE.PointsMaterial({ color: color })
           let pointGeometry = new THREE.Geometry()
+          disposablesList.push(pointMaterial)
+          disposablesList.push(pointGeometry)
           let count = geometry.count
           for (let i = 0; i < count; i++) {
             let pt = geometry.pointAt(i)
@@ -209,7 +322,10 @@ let SceneUtilities = {
           let linelist = new GlslLineList(true)
           let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
           linelist.addPolyline(points, threecolor, 1.5)
-          objectsToAdd.push([linelist.createThreeObject(), geometry.getBoundingBox()])
+          let threeObject = linelist.createThreeObject()
+          disposablesList.push(threeObject.geometry)
+          disposablesList.push(threeObject.material)
+          objectsToAdd.push([threeObject, geometry.getBoundingBox()])
         }
         break
       case rhino3dm.ObjectType.Surface:
@@ -217,19 +333,23 @@ let SceneUtilities = {
         break
       case rhino3dm.ObjectType.Brep:
         {
-          let materialId = getMaterialId(doc, attributes)
-          let faces = geometry.faces()
-          for (let faceIndex = 0; faceIndex < faces.count; faceIndex++) {
-            let face = faces.get(faceIndex)
-            let mesh = face.getMesh(rhino3dm.MeshType.Any)
-            if (mesh) {
-              let threeMesh = this.meshToThreejs(mesh, color, materialId)
-              objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
-              mesh.delete()
+          if (createMeshes) {
+            let materialId = getMaterialId(doc, attributes)
+            let faces = geometry.faces()
+            for (let faceIndex = 0; faceIndex < faces.count; faceIndex++) {
+              let face = faces.get(faceIndex)
+              let mesh = face.getMesh(rhino3dm.MeshType.Any)
+              if (mesh) {
+                let threeMesh = this.meshToThreejs(mesh, color, materialId)
+                disposablesList.push(threeMesh.geometry)
+                disposablesList.push(threeMesh.material)
+                objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
+                mesh.delete()
+              }
+              face.delete()
             }
-            face.delete()
+            faces.delete()
           }
-          faces.delete()
           let wires = new THREE.Group()
           wires.userData['surfaceWires'] = true
           let edges = geometry.edges()
@@ -239,17 +359,26 @@ let SceneUtilities = {
             let linelist = new GlslLineList(true)
             let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
             linelist.addPolyline(points, threecolor, 1.5)
-            wires.add(linelist.createThreeObject())
+            let threeObject = linelist.createThreeObject()
+            disposablesList.push(threeObject.geometry)
+            disposablesList.push(threeObject.material)
+            wires.add(threeObject)
           }
           objectsToAdd.push([wires, geometry.getBoundingBox()])
         }
         break
       case rhino3dm.ObjectType.Mesh:
-        {
+        if (createMeshes) {
           let materialId = getMaterialId(doc, attributes)
           let threeMesh = this.meshToThreejs(geometry, color, materialId)
+          disposablesList.push(threeMesh.geometry)
+          disposablesList.push(threeMesh.material)
           objectsToAdd.push([threeMesh, geometry.getBoundingBox()])
+        }
+        {
           let wires = this.meshWiresToThreejs(geometry, color)
+          disposablesList.push(wires.geometry)
+          disposablesList.push(wires.material)
           objectsToAdd.push([wires, geometry.getBoundingBox()])
         }
         break
@@ -278,7 +407,7 @@ let SceneUtilities = {
             let modelObject = objectTable.findId(id)
             let childGeometry = modelObject.geometry()
             let attr = modelObject.attributes()
-            let children = this.createThreeGeometry(childGeometry, attr, doc)
+            let children = this.createThreeGeometry(childGeometry, attr, doc, disposablesList, true)
             children.forEach((child) => {
               let childBbox = child[1]
               childBbox.transform(geometry.xform)
@@ -316,7 +445,7 @@ let SceneUtilities = {
         console.warn('TODO: Implement hatch')
         break
       case rhino3dm.ObjectType.SubD:
-        {
+        if (createMeshes) {
           // We can do something smarter in the future. For now just
           // make a level 3 mesh
           // let wiremesh = rhino3dm.Mesh.createFromSubDControlNet(geometry)
@@ -324,28 +453,29 @@ let SceneUtilities = {
           let mesh = rhino3dm.Mesh.createFromSubDControlNet(geometry)
           let materialId = getMaterialId(doc, attributes)
           let threeMesh = this.meshToThreejs(mesh, color, materialId)
+          disposablesList.push(threeMesh.geometry)
+          disposablesList.push(threeMesh.material)
           objectsToAdd.push([threeMesh, geometry.getBoundingBox()])
           mesh.delete()
-
-          // This will create the base control net wires. Not too pretty yet
-          /*
-          let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
-          let linelist = new GlslLineList(true)
-          let edges = wiremesh.topologyEdges()
-          for (let edgeIndex = 0; edgeIndex < edges.count; edgeIndex++) {
-            let edge = edges.edgeLine(edgeIndex)
-            let points = [edge.from, edge.to]
-            edge.delete()
-            linelist.addPolyline(points, threecolor, 1.4)
-          }
-          let wires = linelist.createThreeObject()
-          wires.userData['surfaceWires'] = true
-          // let wires = this.meshWiresToThreejs(wiremesh, color)
-          objectsToAdd.push([wires, geometry.getBoundingBox()])
-          edges.delete()
-          wiremesh.delete()
-          */
         }
+        // This will create the base control net wires. Not too pretty yet
+        /*
+        let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
+        let linelist = new GlslLineList(true)
+        let edges = wiremesh.topologyEdges()
+        for (let edgeIndex = 0; edgeIndex < edges.count; edgeIndex++) {
+          let edge = edges.edgeLine(edgeIndex)
+          let points = [edge.from, edge.to]
+          edge.delete()
+          linelist.addPolyline(points, threecolor, 1.4)
+        }
+        let wires = linelist.createThreeObject()
+        wires.userData['surfaceWires'] = true
+        // let wires = this.meshWiresToThreejs(wiremesh, color)
+        objectsToAdd.push([wires, geometry.getBoundingBox()])
+        edges.delete()
+        wiremesh.delete()
+        */
         break
       case rhino3dm.ObjectType.ClipPlane:
         let normal = geometry.normalAt(0, 0)
@@ -355,11 +485,13 @@ let SceneUtilities = {
         objectsToAdd.push([clippingPlane, null])
         break
       case rhino3dm.ObjectType.Extrusion:
-        {
+        if (createMeshes) {
           let mesh = geometry.getMesh(rhino3dm.MeshType.Any)
           if (mesh) {
             let materialId = getMaterialId(doc, attributes)
             let threeMesh = this.meshToThreejs(mesh, color, materialId)
+            disposablesList.push(threeMesh.geometry)
+            disposablesList.push(threeMesh.material)
             objectsToAdd.push([threeMesh, mesh.getBoundingBox()])
             mesh.delete()
           }
@@ -369,51 +501,6 @@ let SceneUtilities = {
         break
     }
     return objectsToAdd
-  },
-  createThreeMaterial (rhinoMaterial, doc) {
-    let material = null
-    let rhino3dm = RViewApp.getRhino3dm()
-
-    let textureLoader = new THREE.TextureLoader()
-    let pbr = rhinoMaterial.physicallyBased()
-    if (pbr.supported) {
-      let textureTypes = [rhino3dm.TextureType.PBR_BaseColor,
-        rhino3dm.TextureType.PBR_Metallic,
-        rhino3dm.TextureType.PBR_Roughness]
-      textureTypes.forEach((t) => {
-        let texture = rhinoMaterial.getTexture(t)
-        if (texture) {
-          let image = doc.getEmbeddedFileAsBase64(texture.fileName)
-          if (image) {
-            if (!material) { material = new THREE.MeshPhysicalMaterial() }
-            if (t === rhino3dm.TextureType.PBR_BaseColor) {
-              material.map = textureLoader.load('data:image/png;base64,' + image)
-            }
-            if (t === rhino3dm.TextureType.PBR_Metallic) {
-              material.metalnessMap = textureLoader.load('data:image/png;base64,' + image)
-            }
-            if (t === rhino3dm.TextureType.PBR_Roughness) {
-              material.roughnessMap = textureLoader.load('data:image/png;base64,' + image)
-            }
-          }
-          texture.delete()
-        }
-      })
-    }
-    if (material) {
-      let ctl = new THREE.CubeTextureLoader()
-      ctl.setPath('cubemaps/' + 'skyboxsun25deg' + '/')
-      let texture = ctl.load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'])
-      material.envMap = texture
-
-      // T:\shared\pbr\Panorama.exr
-      material.metalness = pbr.metallic
-      material.roughness = pbr.roughness
-      material.normalScale.x = 1.0
-      material.normalScale.y = 1.0
-    }
-    pbr.delete()
-    return material
   },
   createScreenQuad () {
     return GlslScreenQuad.createThreeObject()
