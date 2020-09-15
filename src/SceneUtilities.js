@@ -130,23 +130,11 @@ let SceneUtilities = {
   },
   meshWiresToThreejs (mesh, color) {
     let edges = mesh.topologyEdges()
-    let edgeCount = edges.count
-    let verts = new Float32Array(edgeCount * 2 * 3)
-    for (let i = 0; i < edgeCount; i++) {
-      let line = edges.edgeLine(i)
-      verts[i * 6] = line.from[0]
-      verts[i * 6 + 1] = line.from[1]
-      verts[i * 6 + 2] = line.from[2]
-      verts[i * 6 + 3] = line.to[0]
-      verts[i * 6 + 4] = line.to[1]
-      verts[i * 6 + 5] = line.to[2]
-      line.delete()
-    }
-    edges.delete()
+    let verts = new Float32Array(edges.edgesToArray())
     let points = new THREE.BufferGeometry()
     points.setAttribute('position', new THREE.BufferAttribute(verts, 3))
     let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
-    let wireMaterial = new THREE.LineBasicMaterial({ color: threecolor })
+    let wireMaterial = GlslLineList.getBiasLinesMaterial(threecolor) // new THREE.LineBasicMaterial({ color: threecolor })
     let wires = new THREE.LineSegments(points, wireMaterial)
     wires.userData['surfaceWires'] = true
     return wires

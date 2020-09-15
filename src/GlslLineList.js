@@ -56,9 +56,9 @@ void main() {
 #ifdef NO_CLIP_Z
   clip.z = 0.0;
 #else
-  float z = clip_position.z / clip_position.w;
+  float z = clip.z / clip.w;
   z -= 0.001;
-  clip_position.z = z * clip_position.w;
+  clip.z = z * clip.w;
 #endif
   gl_Position = clip;
 }
@@ -298,6 +298,9 @@ class GlslLineList {
     let linelist = new GlslLineList(depthTest)
     linelist.addLines(lines, color, thickness)
     return linelist.createThreeObject()
+  }
+  static getBiasLinesMaterial (color) {
+    return getLinesMaterial(false, color)
   }
   constructor (depthTesting) {
     this._canBeLineSegments = true
