@@ -41,29 +41,23 @@
           <q-item-section>Model 1</q-item-section>
         </q-item>
         <q-item :inset-level="0.3">
-          <q-item-section>Open Sample</q-item-section>
-          <q-item-section avatar>
-            <q-btn-dropdown icon="img:logo.png">
-              <q-list>
-                <q-item v-for="sample in sampleModels"
-                  :key="sample"
-                  clickable
-                  v-close-popup
-                  @click="openSample(sample, true)"
-                >
-                  <q-item-section>
-                    <q-item-label>{{sample}}</q-item-label>
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </q-btn-dropdown>
-          </q-item-section>
+          <q-btn-dropdown class="full-width" no-caps label="Open Sample" icon="img:logo.png">
+            <q-list>
+              <q-item v-for="sample in sampleModels"
+                :key="sample"
+                clickable
+                v-close-popup
+                @click="openSample(sample, true)"
+              >
+                <q-item-section>
+                  <q-item-label>{{sample}}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
         </q-item>
-        <q-item :inset-level="0.3" clickable v-ripple @click="openFile(false)">
-          <q-item-section>Open...</q-item-section>
-          <q-item-section avatar>
-            <q-icon color="primary" name="folder" />
-          </q-item-section>
+        <q-item :inset-level="0.3">
+          <q-btn class="full-width" no-caps label="Open..." icon="folder" @click="openFile(false)"/>
         </q-item>
       </q-list>
       <q-list>
@@ -71,29 +65,23 @@
           <q-item-section>Model 2</q-item-section>
         </q-item>
         <q-item :inset-level="0.3" :disable="!model1Exists">
-          <q-item-section>Open Sample</q-item-section>
-          <q-item-section avatar>
-            <q-btn-dropdown icon="img:logo.png">
-              <q-list>
-                <q-item v-for="sample in sampleModels"
-                  :key="sample"
-                  clickable
-                  v-close-popup
-                  @click="openSample(sample, false)"
-                >
-                  <q-item-section>
-                    <q-item-label>{{sample}}</q-item-label>
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </q-btn-dropdown>
-          </q-item-section>
+          <q-btn-dropdown class="full-width" no-caps label="Open Sample" icon="img:logo.png">
+            <q-list>
+              <q-item v-for="sample in sampleModels"
+                :key="sample"
+                clickable
+                v-close-popup
+                @click="openSample(sample, false)"
+              >
+                <q-item-section>
+                  <q-item-label>{{sample}}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
         </q-item>
-        <q-item :inset-level="0.3" clickable v-ripple :disable="!model1Exists" @click="openFile(true)">
-          <q-item-section>Open...</q-item-section>
-          <q-item-section avatar>
-            <q-icon color="primary" name="folder" />
-          </q-item-section>
+        <q-item :inset-level="0.3">
+          <q-btn class="full-width" no-caps label="Open..." icon="folder" @click="openFile(true)"/>
         </q-item>
       </q-list>
     </q-drawer>
@@ -209,10 +197,10 @@ export default {
     },
     sampleModels () {
       return [
-        'Clip.3dm',
-        'Drill.3dm',
         'RhinoLogo.3dm',
         'RhinoLogoSubD.3dm',
+        'Clip.3dm',
+        'Drill.3dm',
         'Ring.3dm',
         'Teacup.3dm',
         'Teapots.3dm'
