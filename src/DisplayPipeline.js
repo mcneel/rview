@@ -13,12 +13,14 @@ function camerasSame (cam0, cam1) {
   if (Math.abs(cam0.far - cam1.far) > epsilon) return false
   if (Math.abs(cam0.aspect - cam1.aspect) > epsilon) return false
   for (let i = 0; i < 16; i++) {
-    if (Math.abs(cam0.projectionMatrix[i] - cam1.projectionMatrix[i]) > epsilon) return false
-    if (Math.abs(cam0.matrixWorldInverse[i] - cam1.matrixWorldInverse[i]) > epsilon) return false
+    if (Math.abs(cam0.matrix[i] - cam1.matrix[i]) > epsilon) return false
   }
   if (Math.abs(cam0.rotation.x - cam1.rotation.x) > epsilon) return false
   if (Math.abs(cam0.rotation.y - cam1.rotation.y) > epsilon) return false
   if (Math.abs(cam0.rotation.z - cam1.rotation.z) > epsilon) return false
+  if (Math.abs(cam0.position.x - cam1.position.x) > epsilon) return false
+  if (Math.abs(cam0.position.y - cam1.position.y) > epsilon) return false
+  if (Math.abs(cam0.position.z - cam1.position.z) > epsilon) return false
   return true
 }
 
