@@ -43,7 +43,7 @@ export default class RViewApp {
           let name = _cachedDoc[0]
           let byteArray = _cachedDoc[1]
           _cachedDoc = null
-          RViewApp.openFile(name, byteArray)
+          RViewApp.openFile(name, byteArray, true)
         }
       })
     }
@@ -61,15 +61,35 @@ export default class RViewApp {
     RViewApp.#glElementId = elementId
   }
 
+  static closeModel (model1) {
+    if (model1 && RViewApp.#document1 != null) {
+      RViewApp.#document1.dispose()
+      RViewApp.#document1 = null
+      _viewmodel.model1.exists = false
+      _viewmodel.model1.name = ''
+    }
+    if (!model1 && RViewApp.#document2 != null) {
+      RViewApp.#document2.dispose()
+      RViewApp.#document2 = null
+      _viewmodel.model2.exists = false
+      _viewmodel.model2.name = ''
+    }
+
+    if (RViewApp.#displayPipeline != null && RViewApp.#document1 == null && RViewApp.#document2 == null) {
+      RViewApp.#displayPipeline.dispose()
+      RViewApp.#displayPipeline = null
+    }
+  }
+
   /**
    * Open a single file and make it the active document. This closes the
    * existing active document
    * @param {str} name name of file being opening
    * @param {str|ArrayBuffer} contents content of file
-   * @param {boolean} asCompare open the file as a 2nd comparison model
+   * @param {boolean} model1 open the file as 1st model
    * @returns true if a document is successfully opened
    */
-  static openFile (name, contents, asCompare = false) {
+  static openFile (name, contents, model1) {
     // if rhino3dm is not available yet, store file in a variable that will
     // be used to call back into this function once the module is loaded
     if (RViewApp.#rhino3dm == null) {
@@ -83,23 +103,34 @@ export default class RViewApp {
       return false
     }
 
-    if (RViewApp.#document2 != null) RViewApp.#document2.dispose()
-    RViewApp.#document2 = null
+    RViewApp.closeModel(model1)
 
-    if (asCompare && RViewApp.#document1 != null) {
-      RViewApp.#document2 = doc
-      _viewmodel.model2Exists = true
-    } else {
-      if (RViewApp.#document1 != null) RViewApp.#document1.dispose()
+    if (model1) {
       RViewApp.#document1 = doc
+      _viewmodel.model1.exists = true
+      _viewmodel.model1.name = RViewApp.#document1.name
+    } else {
+      RViewApp.#document2 = doc
+      _viewmodel.model2.exists = true
+      _viewmodel.model2.name = RViewApp.#document2.name
     }
 
-    _viewmodel.model1.exists = true
-    _viewmodel.model1.name = RViewApp.#document1.name
-    _viewmodel.model2.exists = RViewApp.#document2 != null
-    _viewmodel.model2.name = RViewApp.#document2 != null ? RViewApp.#document2.name : ''
     // rebuild layers
-    _viewmodel.layers = RViewApp.#document1.layers
+    _viewmodel.layers = []
+    if (RViewApp.#document1 != null) {
+      let compareList = []
+      for (let i = 0; i < RViewApp.#document1.layers.length; i++) {
+        let addToList = true
+        for (let j = 0; j < _viewmodel.layers.length; j++) {
+          if (_viewmodel.layers[j].label === RViewApp.#document1.layers[i].label) {
+            addToList = false
+            break
+          }
+        }
+        if (addToList) compareList.push(RViewApp.#document1.layers[i])
+      }
+      _viewmodel.layers = _viewmodel.layers.concat(compareList)
+    }
     if (RViewApp.#document2 != null) {
       let compareList = []
       for (let i = 0; i < RViewApp.#document2.layers.length; i++) {
@@ -118,10 +149,12 @@ export default class RViewApp {
     let labelDiv = document.getElementById('labels')
     if (labelDiv != null) labelDiv.innerHTML = ''
 
-    RViewApp.updateVisibility()
-    RViewApp.getDisplayPipeline().zoomExtents(true)
-    // Make sure the render loop is running
-    requestAnimationFrame(() => RViewApp.renderLoop())
+    if (RViewApp.#document1 != null || RViewApp.#document2 != null) {
+      RViewApp.updateVisibility()
+      RViewApp.getDisplayPipeline().zoomExtents(true)
+      // Make sure the render loop is running
+      requestAnimationFrame(() => RViewApp.renderLoop())
+    }
     return true
   }
 
@@ -214,6 +247,8 @@ export default class RViewApp {
     requestAnimationFrame(() => RViewApp.renderLoop())
     // don't draw if there is no pipeline to draw
     if (RViewApp.#displayPipeline == null) return
+    if (RViewApp.#document1 == null && RViewApp.#document2 == null) return
+
     RViewApp.#displayPipeline.drawFrameBuffer(
       _viewmodel.showGrid,
       _modes[0],
