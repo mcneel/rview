@@ -8,14 +8,14 @@
           icon="folder"
           :color="!fileDrawerVisible ? '' : 'secondary'"
         >
-        <q-tooltip>Open...</q-tooltip>
+        <q-tooltip>Files</q-tooltip>
         </q-btn>
         <q-btn @click="toggleDrawer(drawers.LAYER)"
           dense
           :flat="!layerDrawerVisible"
           :color="!layerDrawerVisible ? '' : 'secondary'"
           icon="layers"
-          :disable="!model1Exists"
+          :disable="!modelExists"
         >
         <q-tooltip>Layers</q-tooltip>
         </q-btn>
@@ -24,7 +24,7 @@
           :flat="!viewDrawerVisible"
           :color="!viewDrawerVisible ? '' : 'secondary'"
           icon="aspect_ratio"
-          :disable="!model1Exists"
+          :disable="!modelExists"
         >
         <q-tooltip>Display options</q-tooltip>
         </q-btn>
@@ -36,11 +36,27 @@
     </q-header>
 
     <q-drawer v-model="fileDrawerVisible" bordered overlay content-class="bg-grey-2">
+      <q-toolbar class="bg-primary text-white shadow-2">
+        <q-toolbar-title>Files</q-toolbar-title>
+        <q-btn flat round dense icon="arrow_back" @click="toggleDrawer(drawers.FILE)"/>
+      </q-toolbar>
       <q-list bordered>
         <q-item>
-          <q-item-section>Model 1</q-item-section>
+          <q-item-section>
+            {{model1Label}}
+          </q-item-section>
+          <q-item-section side v-if="viewmodel.model1.exists">
+            <q-btn flat round color="primary" icon="o_info" size="sm">
+              <q-tooltip>Model information</q-tooltip>
+            </q-btn>
+          </q-item-section>
+          <q-item-section side v-if="viewmodel.model1.exists">
+            <q-btn flat round color="primary" icon="close" size="sm" @click="closeModel(true)">
+              <q-tooltip>Close</q-tooltip>
+            </q-btn>
+          </q-item-section>
         </q-item>
-        <q-item :inset-level="0.3">
+        <q-item :inset-level="insetLevel">
           <q-btn-dropdown class="full-width" no-caps label="Open Sample" icon="img:logo.png">
             <q-list>
               <q-item v-for="sample in sampleModels"
@@ -56,15 +72,27 @@
             </q-list>
           </q-btn-dropdown>
         </q-item>
-        <q-item :inset-level="0.3">
-          <q-btn class="full-width" no-caps label="Open..." icon="folder" @click="openFile(false)"/>
+        <q-item :inset-level="insetLevel">
+          <q-btn class="full-width" no-caps label="Open..." icon="folder" @click="openFile(true)"/>
         </q-item>
       </q-list>
       <q-list>
-        <q-item :disable="!model1Exists">
-          <q-item-section>Model 2</q-item-section>
+        <q-item>
+          <q-item-section>
+            {{model2Label}}
+          </q-item-section>
+          <q-item-section side v-if="viewmodel.model2.exists">
+            <q-btn flat round color="primary" icon="o_info" size="sm">
+              <q-tooltip>Model information</q-tooltip>
+            </q-btn>
+          </q-item-section>
+          <q-item-section side v-if="viewmodel.model2.exists">
+            <q-btn flat round color="primary" icon="close" size="sm" @click="closeModel(false)">
+              <q-tooltip>Close</q-tooltip>
+            </q-btn>
+          </q-item-section>
         </q-item>
-        <q-item :inset-level="0.3" :disable="!model1Exists">
+        <q-item :inset-level="insetLevel">
           <q-btn-dropdown class="full-width" no-caps label="Open Sample" icon="img:logo.png">
             <q-list>
               <q-item v-for="sample in sampleModels"
@@ -80,8 +108,8 @@
             </q-list>
           </q-btn-dropdown>
         </q-item>
-        <q-item :inset-level="0.3">
-          <q-btn class="full-width" no-caps label="Open..." icon="folder" @click="openFile(true)"/>
+        <q-item :inset-level="insetLevel">
+          <q-btn class="full-width" no-caps label="Open..." icon="folder" @click="openFile(false)"/>
         </q-item>
       </q-list>
     </q-drawer>
@@ -116,10 +144,10 @@
           <q-item-section v-if="viewmodel.model2Exists">Model 1</q-item-section>
           <q-item-section v-else>Show</q-item-section>
         </q-item>
-        <q-item :inset-level="0.3">
+        <q-item :inset-level="insetLevel">
           <q-toggle label="Wires" v-model="viewmodel.model1.displayAttrs.wires" @input="updateVisibility()"/>
         </q-item>
-        <q-item :inset-level="0.3">
+        <q-item :inset-level="insetLevel">
           <q-toggle label="Shading" v-model="viewmodel.model1.displayAttrs.shading" @input="updateVisibility()"/>
         </q-item>
       </q-list>
@@ -127,10 +155,10 @@
         <q-item>
           <q-item-section>Model 2</q-item-section>
         </q-item>
-        <q-item :inset-level="0.3">
+        <q-item :inset-level="insetLevel">
           <q-toggle label="Wires" v-model="viewmodel.model2.displayAttrs.wires" @input="updateVisibility()"/>
         </q-item>
-        <q-item :inset-level="0.3">
+        <q-item :inset-level="insetLevel">
           <q-toggle label="Shading" v-model="viewmodel.model2.displayAttrs.shading" @input="updateVisibility()"/>
         </q-item>
       </q-list>
@@ -138,13 +166,13 @@
         <q-item v-if="viewmodel.model2Exists">
           <q-item-section>General</q-item-section>
         </q-item>
-        <q-item :inset-level="0.3">
+        <q-item :inset-level="insetLevel">
           <q-item-section>
-            <q-toggle v-model="viewmodel.showGrid" label="Grid" @input="updateVisibility()"/>
+            <q-toggle v-model="viewmodel.showGrid" label="Grid"/>
           </q-item-section>
           <q-item-section avatar><q-icon name="grid_on"/></q-item-section>
         </q-item>
-        <q-item v-if="viewmodel.model2Exists" :inset-level="0.3">
+        <q-item v-if="viewmodel.model2Exists" :inset-level="insetLevel">
           <q-option-group v-model="viewmodel.compareMode"
             :options="[{label: 'Swipe Compare', value: 0}, {label: 'Blend Compare', value: 1}]"
             outlined
@@ -175,8 +203,19 @@ export default {
     }
   },
   computed: {
-    model1Exists () {
-      return this.viewmodel.model1.exists
+    insetLevel () {
+      return 0.3
+    },
+    modelExists () {
+      return this.viewmodel.model1.exists || this.viewmodel.model2.exists
+    },
+    model1Label () {
+      if (this.viewmodel.model1.exists) return 'Model 1: ' + this.viewmodel.model1.name
+      return 'Model 1: (none)'
+    },
+    model2Label () {
+      if (this.viewmodel.model2.exists) return 'Model 2: ' + this.viewmodel.model2.name
+      return 'Model 2: (none)'
     },
     sampleModels () {
       return [
@@ -206,17 +245,20 @@ export default {
       this.layerDrawerVisible = (drawer === this.drawers.LAYER) ? !this.layerDrawerVisible : false
       this.viewDrawerVisible = (drawer === this.drawers.VIEW) ? !this.viewDrawerVisible : false
     },
+    closeModel (model1) {
+      RViewApp.closeModel(model1)
+    },
     openSample (name, asModel1) {
       const path = 'samples/' + name
       fetch(path).then((res) => {
         let bufferPromise = res.arrayBuffer()
         bufferPromise.then((buffer) => {
-          RViewApp.openFile(name, new Uint8Array(buffer), !asModel1)
+          RViewApp.openFile(name, new Uint8Array(buffer), asModel1)
           this.fileDrawerVisible = false
         })
       })
     },
-    openFile (asCompare) {
+    openFile (asModel1) {
       let fileInput = document.createElement('input')
       const localVM = this
       let readFile = function (e) {
@@ -225,7 +267,7 @@ export default {
         let reader = new FileReader()
         reader.onload = function (e) {
           var contents = e.target.result
-          const openSuccess = RViewApp.openFile(file.name, contents, asCompare)
+          const openSuccess = RViewApp.openFile(file.name, contents, asModel1)
           document.body.removeChild(fileInput)
           if (openSuccess) localVM.fileDrawerVisible = false
         }

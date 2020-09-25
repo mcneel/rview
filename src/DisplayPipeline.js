@@ -65,6 +65,13 @@ export default class DisplayPipeline {
     this.#screenQuadScene.add(this.#screenQuad)
   }
 
+  dispose () {
+    console.log('dispose pipeline')
+    this.#parentElement.removeChild(this.#renderer.domElement)
+    this.#parentElement.removeChild(this.#labelRenderer.domElement)
+    this.#renderer.dispose()
+  }
+
   setDirtyFlag () {
     this.#dirtyFlag = true
   }
