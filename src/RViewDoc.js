@@ -85,7 +85,6 @@ export default class RViewDoc {
       if (attr.isInstanceDefinitionObject) {
         geometry.delete()
         attr.delete()
-        modelObject.delete()
         continue
       }
       const layerIndex = attr.layerIndex
