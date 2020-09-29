@@ -242,20 +242,23 @@ let SceneUtilities = {
       let [color, material, mesh] = meshes[i]
       let mergeMeshes = [mesh]
       let bbox = mesh.getBoundingBox()
-      for (let j = i + 1; j < meshes.length; j++) {
-        let [nextColor, nextMaterial, nextMesh] = meshes[j]
-        if (color.r === nextColor.r && color.g === nextColor.g && color.b === nextColor.b && color.a === nextColor.a &&
-          rhino3dm.Material.compareAppearance(material, nextMaterial) === 0) {
-          i = j
-          mergeMeshes.push(nextMesh)
-          let nextbbox = nextMesh.getBoundingBox()
-          deleteList.push(nextbbox)
-          bbox = rhino3dm.BoundingBox.union(bbox, nextbbox)
-          continue
+      let materialId = 0
+      if (material != null) {
+        for (let j = i + 1; j < meshes.length; j++) {
+          let [nextColor, nextMaterial, nextMesh] = meshes[j]
+          if (color.r === nextColor.r && color.g === nextColor.g && color.b === nextColor.b && color.a === nextColor.a &&
+            rhino3dm.Material.compareAppearance(material, nextMaterial) === 0) {
+            i = j
+            mergeMeshes.push(nextMesh)
+            let nextbbox = nextMesh.getBoundingBox()
+            deleteList.push(nextbbox)
+            bbox = rhino3dm.BoundingBox.union(bbox, nextbbox)
+            continue
+          }
+          break
         }
-        break
+        materialId = material.id
       }
-      let materialId = material.id
       let threeMesh = this.meshToThreejs(mergeMeshes, color, materialId)
       disposablesList.push(threeMesh.geometry)
       disposablesList.push(threeMesh.material)
@@ -270,7 +273,8 @@ let SceneUtilities = {
     }
 
     for (let i = 0; i < deleteList.length; i++) {
-      deleteList[i].delete()
+      let itemToDelete = deleteList[i]
+      if (itemToDelete != null) itemToDelete.delete()
     }
     return objectsToAdd
   },
