@@ -45,19 +45,19 @@
           <q-item-section>
             {{model1Label}}
           </q-item-section>
-          <q-item-section side v-if="viewmodel.model1.exists">
+          <q-item-section side top v-if="viewmodel.model1.exists">
             <q-btn flat round color="primary" icon="o_info" size="sm">
               <q-tooltip>Model information</q-tooltip>
             </q-btn>
           </q-item-section>
-          <q-item-section side v-if="viewmodel.model1.exists">
+          <q-item-section side top v-if="viewmodel.model1.exists">
             <q-btn flat round color="primary" icon="close" size="sm" @click="closeModel(true)">
               <q-tooltip>Close</q-tooltip>
             </q-btn>
           </q-item-section>
         </q-item>
         <q-item :inset-level="insetLevel">
-          <q-btn-dropdown class="full-width" no-caps label="Open Sample" icon="img:logo.png">
+          <q-btn-dropdown class="full-width" no-caps label="Open..." icon="folder" split @click="openFile(true)">
             <q-list>
               <q-item v-for="sample in sampleModels"
                 :key="sample"
@@ -68,12 +68,12 @@
                 <q-item-section>
                   <q-item-label>{{sample}}</q-item-label>
                 </q-item-section>
+                <q-item-section side>
+                  <q-icon name="img:logo.png"/>
+                </q-item-section>
               </q-item>
             </q-list>
           </q-btn-dropdown>
-        </q-item>
-        <q-item :inset-level="insetLevel">
-          <q-btn class="full-width" no-caps label="Open..." icon="folder" @click="openFile(true)"/>
         </q-item>
       </q-list>
       <q-list>
@@ -81,19 +81,19 @@
           <q-item-section>
             {{model2Label}}
           </q-item-section>
-          <q-item-section side v-if="viewmodel.model2.exists">
+          <q-item-section side top v-if="viewmodel.model2.exists">
             <q-btn flat round color="primary" icon="o_info" size="sm">
               <q-tooltip>Model information</q-tooltip>
             </q-btn>
           </q-item-section>
-          <q-item-section side v-if="viewmodel.model2.exists">
+          <q-item-section side top v-if="viewmodel.model2.exists">
             <q-btn flat round color="primary" icon="close" size="sm" @click="closeModel(false)">
               <q-tooltip>Close</q-tooltip>
             </q-btn>
           </q-item-section>
         </q-item>
         <q-item :inset-level="insetLevel">
-          <q-btn-dropdown class="full-width" no-caps label="Open Sample" icon="img:logo.png">
+          <q-btn-dropdown class="full-width" no-caps label="Open..." icon="folder" split @click="openFile(false)">
             <q-list>
               <q-item v-for="sample in sampleModels"
                 :key="sample"
@@ -104,12 +104,12 @@
                 <q-item-section>
                   <q-item-label>{{sample}}</q-item-label>
                 </q-item-section>
+                <q-item-section side>
+                  <q-icon name="img:logo.png"/>
+                </q-item-section>
               </q-item>
             </q-list>
           </q-btn-dropdown>
-        </q-item>
-        <q-item :inset-level="insetLevel">
-          <q-btn class="full-width" no-caps label="Open..." icon="folder" @click="openFile(false)"/>
         </q-item>
       </q-list>
     </q-drawer>
