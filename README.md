@@ -34,4 +34,4 @@ See [Configuring quasar.conf.js](https://quasar.dev/quasar-cli/quasar-conf-js).
 
 ### Notes
 A good query string test url would be
-https://mcneel.github.io/rview/#/view?url=https%3A%2F%2Fmcneel.github.io%2Frview%2Fhello_mesh.3dm
+https://mcneel.github.io/rview/#/view?url=https%3A%2F%2Fmcneel.github.io%2Frview%2F/samples%2FRhinoLogo.3dm
