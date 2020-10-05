@@ -81,7 +81,7 @@ export default {
       fetch(url).then(async res => {
         if (res.status === 200) {
           const buffer = await res.arrayBuffer()
-          RViewApp.openFile(url, new Uint8Array(buffer))
+          RViewApp.openFile(url, new Uint8Array(buffer), true)
         } else {
           alert(`Error retrieving resource.\n${res.status}`)
         }
