@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import FileObj from './FileObj.js'
 import FileDraco from './FileDraco.js'
 import FilePly from './FilePly.js'
+import File3dm from './File3dm.js'
 import SceneUtilities from './SceneUtilities.js'
 import DisplayMode from './DisplayMode.js'
 
@@ -237,8 +238,11 @@ let RhinoApp = {
     } else if (name.endsWith('.ply')) {
       let doc = FilePly.readFile(name, contents)
       doc ? this.setActiveDoc(name, doc) : alert('Invalid document.')
+    } else if (name.endsWith('.3dm')) {
+      File3dm.readFile(name, contents).then(doc => { doc ? this.setActiveDoc(name, doc) : alert('Invalid document.') })
     } else {
       let doc = _rhino3dm.File3dm.fromByteArray(contents)
+      console.log('doc:', doc)
       doc ? this.setActiveDoc(name, doc) : alert('Invalid document.')
     }
   },

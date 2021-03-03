@@ -6,6 +6,7 @@ let FilePly = {
     let rhino3dm = RhinoApp.getRhino3dm()
     let loader = new PLYLoader()
     let geometry = loader.parse(contents)
+    console.log(geometry)
     let doc = new rhino3dm.File3dm()
     let layer = new rhino3dm.Layer()
     layer.name = 'Default'
