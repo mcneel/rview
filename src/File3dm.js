@@ -21,6 +21,7 @@ let FilePly = {
 
         threeObj.children.forEach((obj) => {
           let attrs = new rhino3dm.ObjectAttributes()
+          console.log(obj)
           if (obj.type === 'Mesh') {
             try {
               attrs.layerIndex = obj.userData.attributes.layerIndex
