@@ -8,7 +8,8 @@
           icon="folder"
           :color="!fileDrawerVisible ? '' : 'secondary'"
         >
-        <q-tooltip>Files</q-tooltip>
+        <!-- <q-tooltip>Files</q-tooltip> -->
+        <q-tooltip>File</q-tooltip>
         </q-btn>
         <q-btn @click="toggleDrawer(drawers.LAYER)"
           dense
@@ -37,7 +38,8 @@
 
     <q-drawer v-model="fileDrawerVisible" bordered overlay content-class="bg-grey-2">
       <q-toolbar class="bg-primary text-white shadow-2">
-        <q-toolbar-title>Files</q-toolbar-title>
+        <!-- <q-toolbar-title>Files</q-toolbar-title> -->
+        <q-toolbar-title>File</q-toolbar-title>
         <q-btn flat round dense icon="arrow_back" @click="toggleDrawer(drawers.FILE)"/>
       </q-toolbar>
       <q-list bordered>
@@ -76,7 +78,7 @@
           </q-btn-dropdown>
         </q-item>
       </q-list>
-      <q-list>
+<!--       <q-list>
         <q-item>
           <q-item-section>
             {{model2Label}}
@@ -111,7 +113,7 @@
             </q-list>
           </q-btn-dropdown>
         </q-item>
-      </q-list>
+      </q-list> -->
     </q-drawer>
 
     <q-drawer v-model="layerDrawerVisible" bordered overlay content-class="bg-grey-2">
@@ -151,7 +153,7 @@
           <q-toggle label="Shading" v-model="viewmodel.model1.displayAttrs.shading" @input="updateVisibility()"/>
         </q-item>
       </q-list>
-      <q-list dense v-if="viewmodel.model2Exists">
+<!--       <q-list dense v-if="viewmodel.model2Exists">
         <q-item>
           <q-item-section>Model 2</q-item-section>
         </q-item>
@@ -161,8 +163,8 @@
         <q-item :inset-level="insetLevel">
           <q-toggle label="Shading" v-model="viewmodel.model2.displayAttrs.shading" @input="updateVisibility()"/>
         </q-item>
-      </q-list>
-      <q-list dense bordered>
+      </q-list> -->
+<!--       <q-list dense bordered>
         <q-item v-if="viewmodel.model2Exists">
           <q-item-section>General</q-item-section>
         </q-item>
@@ -178,7 +180,7 @@
             outlined
           />
         </q-item>
-      </q-list>
+      </q-list> -->
     </q-drawer>
     <q-page-container>
       <router-view />

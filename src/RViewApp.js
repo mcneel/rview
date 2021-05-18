@@ -50,7 +50,7 @@ export default class RViewApp {
   }
 
   static applicationTitle () {
-    return 'rview WIP'
+    return 'rview'
   }
 
   /**
