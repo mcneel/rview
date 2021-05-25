@@ -246,6 +246,9 @@ let SceneUtilities = {
       if (material != null) {
         for (let j = i + 1; j < meshes.length; j++) {
           let [nextColor, nextMaterial, nextMesh] = meshes[j]
+          if (nextMaterial === null) {
+            break
+          }
           if (color.r === nextColor.r && color.g === nextColor.g && color.b === nextColor.b && color.a === nextColor.a &&
             rhino3dm.Material.compareAppearance(material, nextMaterial) === 0) {
             i = j
