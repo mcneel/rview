@@ -13,7 +13,7 @@
     "@quasar/extras": "^1.10.5",
     "core-js": "^3.0.0",
     "quasar": "^1.15.16",
-    "three": "^0.120.0"
+    "three": "^0.125.0"
   },
   "devDependencies": {
     "@quasar/app": "^2.2.6",
