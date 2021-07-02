@@ -29,6 +29,14 @@
         >
         <q-tooltip>Display options</q-tooltip>
         </q-btn>
+        <q-btn @click="toggleDrawer(drawers.VGS)"
+          dense
+          :flat="!vgsDrawerVisible"
+          :color="!vgsDrawerVisible ? '' : 'secondary'"
+          icon="pets"
+        >
+        <q-tooltip>Vinci Grasshopper Service Demo</q-tooltip>
+        </q-btn>
 
         <q-toolbar-title>
         </q-toolbar-title>
@@ -47,11 +55,12 @@
           <q-item-section>
             {{model1Label}}
           </q-item-section>
-          <q-item-section side top v-if="viewmodel.model1.exists">
+          <!-- This is dead code and doesn't display model info for now -->
+          <!-- <q-item-section side top v-if="viewmodel.model1.exists">
             <q-btn flat round color="primary" icon="o_info" size="sm">
               <q-tooltip>Model information</q-tooltip>
             </q-btn>
-          </q-item-section>
+          </q-item-section> -->
           <q-item-section side top v-if="viewmodel.model1.exists">
             <q-btn flat round color="primary" icon="close" size="sm" @click="closeModel(true)">
               <q-tooltip>Close</q-tooltip>
@@ -131,21 +140,21 @@
               {{layer.label}}
             </q-item-section>
           </template>
-          <q-card>
+          <!-- <q-card>
             <q-card-section>
               Still working on child layer UI
             </q-card-section>
-          </q-card>
+          </q-card> -->
         </q-expansion-item>
       </q-list>
     </q-drawer>
 
     <q-drawer v-model="viewDrawerVisible" bordered overlay content-class="bg-grey-2">
       <q-list bordered dense>
-        <q-item>
+        <!-- <q-item>
           <q-item-section v-if="viewmodel.model2Exists">Model 1</q-item-section>
           <q-item-section v-else>Show</q-item-section>
-        </q-item>
+        </q-item> -->
         <q-item :inset-level="insetLevel">
           <q-toggle label="Wires" v-model="viewmodel.model1.displayAttrs.wires" @input="updateVisibility()"/>
         </q-item>
@@ -182,6 +191,47 @@
         </q-item>
       </q-list> -->
     </q-drawer>
+
+    <q-drawer v-model="vgsDrawerVisible" bordered overlay content-class="bg-grey-2">
+      <q-toolbar class="bg-primary text-white shadow-2">
+        <!-- <q-toolbar-title>Files</q-toolbar-title> -->
+        <q-toolbar-title>VGS Demo</q-toolbar-title>
+        <q-btn flat round dense icon="arrow_back" @click="toggleDrawer(drawers.VGS)"/>
+      </q-toolbar>
+      <q-list bordered>
+        <q-item>
+          <q-item-section>
+            {{model1Label}}
+          </q-item-section>
+          <q-item-section side top v-if="viewmodel.model1.exists">
+            <q-btn flat round color="primary" icon="close" size="sm" @click="closeModel(true)">
+              <q-tooltip>Close</q-tooltip>
+            </q-btn>
+          </q-item-section>
+        </q-item>
+        <q-item>
+          <q-item-section v-if="!viewmodel.model1.exists">
+            <div class="q-pb-lg">
+              <q-file
+                v-model="vgs_model_script"
+                label="Pick script"
+                filled
+                style="max-width: 300px"
+              />
+            </div>
+          </q-item-section>
+        </q-item>
+        <q-item>
+          <q-item-section>
+            <q-slider v-model="vgs_model_input" :min="-12" :max="12" label-always />
+          </q-item-section>
+          <q-item-section side top>
+             <q-btn round color="primary" icon="directions_run" @click="callVgs()" />
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </q-drawer>
+
     <q-page-container>
       <router-view />
     </q-page-container>
@@ -191,6 +241,8 @@
 <script>
 import RViewApp from '../RViewApp'
 import DisplayMode from '../DisplayMode'
+import { GrasshopperJob, GrasshopperService } from '../GrasshopperService'
+import RhinoFile from '../RhinoFile'
 
 export default {
   data () {
@@ -199,9 +251,12 @@ export default {
       layerDrawerVisible: false,
       fileDrawerVisible: true,
       viewDrawerVisible: false,
+      vgsDrawerVisible: false,
       viewmodel: vm,
-      drawers: { FILE: 1, LAYER: 2, VIEW: 3 },
-      backgroundModes: DisplayMode.backgroundModes
+      drawers: { FILE: 1, LAYER: 2, VIEW: 3, VGS: 4 },
+      backgroundModes: DisplayMode.backgroundModes,
+      vgs_model_script: null,
+      vgs_model_input: 0
     }
   },
   computed: {
@@ -212,13 +267,13 @@ export default {
       return this.viewmodel.model1.exists || this.viewmodel.model2.exists
     },
     model1Label () {
-      if (this.viewmodel.model1.exists) return 'Model 1: ' + this.viewmodel.model1.name
-      return 'Model 1: (none)'
+      if (this.viewmodel.model1.exists) return 'Model: ' + this.viewmodel.model1.name
+      return 'Model: (none)'
     },
-    model2Label () {
-      if (this.viewmodel.model2.exists) return 'Model 2: ' + this.viewmodel.model2.name
-      return 'Model 2: (none)'
-    },
+    // model2Label () {
+    //   if (this.viewmodel.model2.exists) return 'Model 2: ' + this.viewmodel.model2.name
+    //   return 'Model 2: (none)'
+    // },
     sampleModels () {
       return [
         'RhinoLogo.3dm',
@@ -246,6 +301,7 @@ export default {
       this.fileDrawerVisible = (drawer === this.drawers.FILE) ? !this.fileDrawerVisible : false
       this.layerDrawerVisible = (drawer === this.drawers.LAYER) ? !this.layerDrawerVisible : false
       this.viewDrawerVisible = (drawer === this.drawers.VIEW) ? !this.viewDrawerVisible : false
+      this.vgsDrawerVisible = (drawer === this.drawers.VGS) ? !this.vgsDrawerVisible : false
     },
     closeModel (model1) {
       RViewApp.closeModel(model1)
@@ -290,6 +346,29 @@ export default {
     },
     updateVisibility () {
       RViewApp.updateVisibility()
+    },
+    callVgs () {
+      console.log('Calling VGS')
+      let ghJob = new GrasshopperJob(this.vgs_model_script,
+        [
+          {
+            'ParamName': 'RH_IN:force',
+            'InnerTree': { '{0; }': [{ 'type': 'System.Double', 'data': this.vgs_model_input.toString() }] }
+          }
+        ])
+      new GrasshopperService().getJson(ghJob).then(
+        function (value) {
+          if (value !== null) {
+            let rhFile = new RhinoFile(value)
+            const contents3dm = rhFile.get3dm(RViewApp.getRhino3dm())
+            RViewApp.openFile('01_SimpleBeam_complex_test', contents3dm, true)
+            // Keep the VGS drawer visible
+          }
+        },
+        function (error) {
+          console.error(error)
+        }
+      )
     }
   }
 }
