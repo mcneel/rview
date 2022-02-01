@@ -79,7 +79,8 @@ export default class RViewDoc {
   parseDoc () {
     const doc = this.rhinoDoc
     const loader = new Rhino3dmLoader()
-    loader.setLibraryPath('https://cdn.jsdelivr.net/npm/rhino3dm@7.11.1/')
+    // loader.setLibraryPath('https://cdn.jsdelivr.net/npm/rhino3dm@7.11.1/')
+    loader.setLibraryPath('rhino3dm/')
     let arr = new Uint8Array(doc.toByteArray()).buffer
     loader.parse(arr, function (object) {
       console.log(object)

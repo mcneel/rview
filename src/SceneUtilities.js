@@ -130,12 +130,17 @@ let SceneUtilities = {
   },
   meshWiresToThreejs (mesh, color) {
     let edges = mesh.topologyEdges()
-    let verts = new Float32Array(edges.edgesToArray())
-    let points = new THREE.BufferGeometry()
-    points.setAttribute('position', new THREE.BufferAttribute(verts, 3))
+    const points = []
+    for (let i = 0; i < edges.count; i++) {
+      const pt0 = edges.edgeLine(i).from
+      const pt1 = edges.edgeLine(i).to
+      points.push(new THREE.Vector3().fromArray(pt0))
+      points.push(new THREE.Vector3().fromArray(pt1))
+    }
+    const pointGeometry = new THREE.BufferGeometry().setFromPoints(points)
     let threecolor = new THREE.Color(color.r / 255.0, color.g / 255.0, color.b / 255.0)
     let wireMaterial = GlslLineList.getBiasLinesMaterial(threecolor) // new THREE.LineBasicMaterial({ color: threecolor })
-    let wires = new THREE.LineSegments(points, wireMaterial)
+    let wires = new THREE.LineSegments(pointGeometry, wireMaterial)
     wires.userData['surfaceWires'] = true
     return wires
   },
@@ -292,10 +297,8 @@ let SceneUtilities = {
           let pointMaterial = new THREE.PointsMaterial({ color: color })
           let pt = geometry.location
           const points = []
-          points.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
-          // let pointGeometry = new THREE.Geometry()
+          points.push(new THREE.Vector3().fromArray(pt))
           const pointGeometry = new THREE.BufferGeometry().setFromPoints(points)
-          // pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
           disposablesList.push(pointMaterial)
           disposablesList.push(pointGeometry)
           objectsToAdd.push([new THREE.Points(pointGeometry, pointMaterial), geometry.getBoundingBox()])
