@@ -1,6 +1,6 @@
 {
   "name": "rview",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Rhino model viewer",
   "productName": "rview",
   "author": "Steve Baer <steve@mcneel.com>",
@@ -13,7 +13,8 @@
     "@quasar/extras": "^1.10.5",
     "core-js": "^3.0.0",
     "quasar": "^1.15.16",
-    "three": "^0.120.0"
+    "rhino3dm": "^7.11.1",
+    "three": "^0.137.5"
   },
   "devDependencies": {
     "@quasar/app": "^2.2.6",
