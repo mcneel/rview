@@ -4,6 +4,7 @@ import FileDraco from './FileDraco'
 import FilePly from './FilePly'
 import SceneUtilities from './SceneUtilities'
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
+import { Rhino3dmLoader } from 'three/examples/jsm/loaders/3DMLoader'
 
 function addToDictionary (node, chunks, layer) {
   chunks.forEach((chunk) => {
@@ -70,6 +71,19 @@ export default class RViewDoc {
     layers.delete()
     this.layers = createNodes(topLayers)
     this.buildSceneHelper()
+    this.parseDoc()
+  }
+
+  // 2022.02.01 Luis Fraguada
+  // Added simple parse to test functionality
+  parseDoc () {
+    const doc = this.rhinoDoc
+    const loader = new Rhino3dmLoader()
+    loader.setLibraryPath('https://cdn.jsdelivr.net/npm/rhino3dm@7.11.1/')
+    let arr = new Uint8Array(doc.toByteArray()).buffer
+    loader.parse(arr, function (object) {
+      console.log(object)
+    })
   }
 
   buildSceneHelper () {
