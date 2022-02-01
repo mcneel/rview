@@ -71,7 +71,6 @@ export default class RViewDoc {
     layers.delete()
     this.layers = createNodes(topLayers)
     this.buildSceneHelper()
-    this.parseDoc()
   }
 
   // 2022.02.01 Luis Fraguada
@@ -87,7 +86,20 @@ export default class RViewDoc {
     })
   }
 
-  buildSceneHelper () {
+  parseDocAsync () {
+    const doc = this.rhinoDoc
+    return new Promise(function (resolve, reject) {
+      const loader = new Rhino3dmLoader()
+      loader.setLibraryPath('rhino3dm/')
+      let arr = new Uint8Array(doc.toByteArray()).buffer
+      loader.parse(arr, resolve, reject)
+    })
+  }
+
+  async buildSceneHelper () {
+    const data = await this.parseDocAsync()
+    console.log(data)
+
     const doc = this.rhinoDoc
     let objects = doc.objects()
     let objectsByLayer = {}
@@ -116,8 +128,8 @@ export default class RViewDoc {
         let bbox = obj[1]
         threeGeometry.fullLayerPath = layer.fullPath
         if (bbox) {
-          let minPoint = new THREE.Vector3(bbox.min[0], bbox.min[1], bbox.min[2])
-          let maxPoint = new THREE.Vector3(bbox.max[0], bbox.max[1], bbox.max[2])
+          let minPoint = new THREE.Vector3().fromArray(bbox.min)
+          let maxPoint = new THREE.Vector3().fromArray(bbox.max)
           threeGeometry.boundingBox = new THREE.Box3(minPoint, maxPoint)
           bbox.delete()
         }
