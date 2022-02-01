@@ -290,9 +290,12 @@ let SceneUtilities = {
       case rhino3dm.ObjectType.Point:
         {
           let pointMaterial = new THREE.PointsMaterial({ color: color })
-          let pointGeometry = new THREE.Geometry()
           let pt = geometry.location
-          pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
+          const points = []
+          points.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
+          // let pointGeometry = new THREE.Geometry()
+          const pointGeometry = new THREE.BufferGeometry().setFromPoints(points)
+          // pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
           disposablesList.push(pointMaterial)
           disposablesList.push(pointGeometry)
           objectsToAdd.push([new THREE.Points(pointGeometry, pointMaterial), geometry.getBoundingBox()])
@@ -301,14 +304,16 @@ let SceneUtilities = {
       case rhino3dm.ObjectType.PointSet:
         {
           let pointMaterial = new THREE.PointsMaterial({ color: color })
-          let pointGeometry = new THREE.Geometry()
           disposablesList.push(pointMaterial)
-          disposablesList.push(pointGeometry)
           let count = geometry.count
+          const points = []
           for (let i = 0; i < count; i++) {
             let pt = geometry.pointAt(i)
-            pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
+            points.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
+            // pointGeometry.vertices.push(new THREE.Vector3(pt[0], pt[1], pt[2]))
           }
+          let pointGeometry = new THREE.BufferGeometry().setFromPoints(points)
+          disposablesList.push(pointGeometry)
           objectsToAdd.push([new THREE.Points(pointGeometry, pointMaterial), geometry.getBoundingBox()])
         }
         break

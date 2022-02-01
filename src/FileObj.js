@@ -1,8 +1,8 @@
-import { OBJLoader2 } from 'three/examples/jsm/loaders/OBJLoader2'
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 
 let FileObj = {
   readFile (name, contents, rhino3dm) {
-    let objLoader = new OBJLoader2()
+    let objLoader = new OBJLoader()
     let threeObj = objLoader.parse(contents)
     let doc = new rhino3dm.File3dm()
     let layer = new rhino3dm.Layer()
