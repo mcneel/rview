@@ -35,7 +35,7 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="fileDrawerVisible" bordered overlay content-class="bg-grey-2">
+    <q-drawer v-model="fileDrawerVisible" bordered overlay class="bg-grey-2">
       <q-toolbar class="bg-primary text-white shadow-2">
         <q-toolbar-title>Files</q-toolbar-title>
         <q-btn flat round dense icon="arrow_back" @click="toggleDrawer(drawers.FILE)"/>
@@ -114,7 +114,7 @@
       </q-list>
     </q-drawer>
 
-    <q-drawer v-model="layerDrawerVisible" bordered overlay content-class="bg-grey-2">
+    <q-drawer v-model="layerDrawerVisible" bordered overlay class="bg-grey-2">
       <q-list>
         <q-expansion-item v-for="layer in viewmodel.layers"
           :key="layer.label"
@@ -138,7 +138,7 @@
       </q-list>
     </q-drawer>
 
-    <q-drawer v-model="viewDrawerVisible" bordered overlay content-class="bg-grey-2">
+    <q-drawer v-model="viewDrawerVisible" bordered overlay class="bg-grey-2">
       <q-list bordered dense>
         <q-item>
           <q-item-section v-if="viewmodel.model2Exists">Model 1</q-item-section>
