@@ -83,7 +83,6 @@ export default class DisplayPipeline {
     let viewportWidth = this.#parentElement.clientWidth
     let viewportHeight = this.#parentElement.clientHeight
     const windowResize = this.#frameSize[0] !== this.#parentElement.clientWidth || this.#frameSize[1] !== this.#parentElement.clientHeight
-    this.#frameSize = [this.#parentElement.clientWidth, this.#parentElement.clientHeight]
 
     if (windowResize) {
       dirty = true
@@ -92,6 +91,9 @@ export default class DisplayPipeline {
       this.#renderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
       this.#labelRenderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
     }
+
+    this.#frameSize = [this.#parentElement.clientWidth, this.#parentElement.clientHeight]
+
     this.#controls.update()
     SceneUtilities.viewportSize.width = viewportWidth
     SceneUtilities.viewportSize.height = viewportHeight
