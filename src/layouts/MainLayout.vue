@@ -123,7 +123,7 @@
           >
           <template v-slot:header>
             <q-item-section avatar>
-              <q-toggle v-model="layer.visible" @input="updateVisibility()"/>
+              <q-toggle v-model="layer.visible" @update:model-value="updateVisibility()"/>
             </q-item-section>
             <q-item-section>
               {{layer.label}}
@@ -145,10 +145,10 @@
           <q-item-section v-else>Show</q-item-section>
         </q-item>
         <q-item :inset-level="insetLevel">
-          <q-toggle label="Wires" v-model="viewmodel.model1.displayAttrs.wires" @input="updateVisibility()"/>
+          <q-toggle label="Wires" v-model="viewmodel.model1.displayAttrs.wires" @update:model-value="updateVisibility()"/>
         </q-item>
         <q-item :inset-level="insetLevel">
-          <q-toggle label="Shading" v-model="viewmodel.model1.displayAttrs.shading" @input="updateVisibility()"/>
+          <q-toggle label="Shading" v-model="viewmodel.model1.displayAttrs.shading" @update:model-value="updateVisibility()"/>
         </q-item>
       </q-list>
       <q-list dense v-if="viewmodel.model2Exists">
@@ -156,10 +156,10 @@
           <q-item-section>Model 2</q-item-section>
         </q-item>
         <q-item :inset-level="insetLevel">
-          <q-toggle label="Wires" v-model="viewmodel.model2.displayAttrs.wires" @input="updateVisibility()"/>
+          <q-toggle label="Wires" v-model="viewmodel.model2.displayAttrs.wires" @update:model-value="updateVisibility()"/>
         </q-item>
         <q-item :inset-level="insetLevel">
-          <q-toggle label="Shading" v-model="viewmodel.model2.displayAttrs.shading" @input="updateVisibility()"/>
+          <q-toggle label="Shading" v-model="viewmodel.model2.displayAttrs.shading" @update:model-value="updateVisibility()"/>
         </q-item>
       </q-list>
       <q-list dense bordered>
