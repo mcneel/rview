@@ -282,8 +282,11 @@ export default {
       fileInput.style.display = 'none'
       fileInput.onchange = readFile
       document.body.appendChild(fileInput)
-      let eventMouse = document.createEvent('MouseEvents')
-      eventMouse.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null)
+      let eventMouse = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      })
       fileInput.dispatchEvent(eventMouse)
     },
     updateVisibility () {
