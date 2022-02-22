@@ -3,24 +3,32 @@ import RViewDoc from './RViewDoc'
 import DisplayMode from './DisplayMode'
 
 let _cachedDoc = null
-let _viewmodel = {
-  model1: { exists: false, name: '', displayAttrs: { wires: true, shading: true } },
-  model2: { exists: false, name: '', displayAttrs: { wires: true, shading: true } },
-  expanded: ['Layers'],
-  layers: [],
-  perspectiveCamera: true,
-  showGrid: true,
-  comparePosition: 50,
-  compareMode: 0
-}
 let _modes = DisplayMode.defaultModes()
 
-export default class RViewApp {
-  static #rhino3dm = null // rhino3dm.js wasm library (needs to be loaded async)
-  static #displayPipeline = null
-  static #glElementId = '' // parent DOM element id for WebGL control
-  static #document1 = null // main document we are viewing
-  static #document2 = null // 2nd document for comparison with main doc
+class RViewApp {
+  #rhino3dm = null // rhino3dm.js wasm library (needs to be loaded async)
+  #displayPipeline = null
+  #glElementId = '' // parent DOM element id for WebGL control
+  #document1 = null // main document we are viewing
+  #document2 = null // 2nd document for comparison with main doc
+
+  constructor () {
+    this.#rhino3dm = null // rhino3dm.js wasm library (needs to be loaded async)
+    this.#displayPipeline = null
+    this.#glElementId = '' // parent DOM element id for WebGL control
+    this.#document1 = null // main document we are viewing
+    this.#document2 = null // 2nd document for comparison with main doc
+    this._viewmodel = {
+      model1: { exists: false, name: '', displayAttrs: { wires: true, shading: true } },
+      model2: { exists: false, name: '', displayAttrs: { wires: true, shading: true } },
+      expanded: ['Layers'],
+      layers: [],
+      perspectiveCamera: true,
+      showGrid: true,
+      comparePosition: 50,
+      compareMode: 0
+    }
+  }
 
   /**
    * Called by top level App.vue to initialize rhino3dm wasm library. Web
@@ -30,26 +38,26 @@ export default class RViewApp {
    * @param {function} startwait function to call to show wait UI
    * @param {function} endwait function to end wait UI
    */
-  static init (rh3dm, startwait, endwait) {
-    if (RViewApp.#rhino3dm == null) {
+  init (rh3dm, startwait, endwait) {
+    if (this.#rhino3dm == null) {
       let rhino3dmPromise = rh3dm()
       console.log('start loading rhino3dm')
       startwait()
       rhino3dmPromise.then(r => {
-        RViewApp.#rhino3dm = r
+        this.#rhino3dm = r
         endwait()
         console.log('rhino3dm loaded')
         if (_cachedDoc != null) {
           let name = _cachedDoc[0]
           let byteArray = _cachedDoc[1]
           _cachedDoc = null
-          RViewApp.openFile(name, byteArray, true)
+          this.openFile(name, byteArray, true)
         }
       })
     }
   }
 
-  static applicationTitle () {
+  applicationTitle () {
     return 'rview WIP'
   }
 
@@ -57,27 +65,27 @@ export default class RViewApp {
    * Set the DOM element that this app will draw WebGL content into
    * @param {str} elementId id of the parent element for drawing
    */
-  static registerWebGlElement (elementId) {
-    RViewApp.#glElementId = elementId
+  registerWebGlElement (elementId) {
+    this.#glElementId = elementId
   }
 
-  static closeModel (model1) {
-    if (model1 && RViewApp.#document1 != null) {
-      RViewApp.#document1.dispose()
-      RViewApp.#document1 = null
-      _viewmodel.model1.exists = false
-      _viewmodel.model1.name = ''
+  closeModel (model1) {
+    if (model1 && this.#document1 != null) {
+      this.#document1.dispose()
+      this.#document1 = null
+      this._viewmodel.model1.exists = false
+      this._viewmodel.model1.name = ''
     }
-    if (!model1 && RViewApp.#document2 != null) {
-      RViewApp.#document2.dispose()
-      RViewApp.#document2 = null
-      _viewmodel.model2.exists = false
-      _viewmodel.model2.name = ''
+    if (!model1 && this.#document2 != null) {
+      this.#document2.dispose()
+      this.#document2 = null
+      this._viewmodel.model2.exists = false
+      this._viewmodel.model2.name = ''
     }
 
-    if (RViewApp.#displayPipeline != null && RViewApp.#document1 == null && RViewApp.#document2 == null) {
-      RViewApp.#displayPipeline.dispose()
-      RViewApp.#displayPipeline = null
+    if (this.#displayPipeline != null && this.#document1 == null && this.#document2 == null) {
+      this.#displayPipeline.dispose()
+      this.#displayPipeline = null
     }
   }
 
@@ -89,140 +97,140 @@ export default class RViewApp {
    * @param {boolean} model1 open the file as 1st model
    * @returns true if a document is successfully opened
    */
-  static openFile (name, contents, model1) {
+  openFile (name, contents, model1) {
     // if rhino3dm is not available yet, store file in a variable that will
     // be used to call back into this function once the module is loaded
-    if (RViewApp.#rhino3dm == null) {
+    if (this.#rhino3dm == null) {
       _cachedDoc = [name, contents]
       return false
     }
 
-    const doc = RViewDoc.create(name, contents, RViewApp.#rhino3dm)
+    const doc = RViewDoc.create(name, contents, this.#rhino3dm)
     if (doc == null) {
       alert('Invalid document')
       return false
     }
 
-    RViewApp.closeModel(model1)
+    this.closeModel(model1)
 
     if (model1) {
-      RViewApp.#document1 = doc
-      _viewmodel.model1.exists = true
-      _viewmodel.model1.name = RViewApp.#document1.name
+      this.#document1 = doc
+      this._viewmodel.model1.exists = true
+      this._viewmodel.model1.name = this.#document1.name
     } else {
-      RViewApp.#document2 = doc
-      _viewmodel.model2.exists = true
-      _viewmodel.model2.name = RViewApp.#document2.name
+      this.#document2 = doc
+      this._viewmodel.model2.exists = true
+      this._viewmodel.model2.name = this.#document2.name
     }
 
     // rebuild layers
-    _viewmodel.layers = []
-    if (RViewApp.#document1 != null) {
+    this._viewmodel.layers = []
+    if (this.#document1 != null) {
       let compareList = []
-      for (let i = 0; i < RViewApp.#document1.layers.length; i++) {
+      for (let i = 0; i < this.#document1.layers.length; i++) {
         let addToList = true
-        for (let j = 0; j < _viewmodel.layers.length; j++) {
-          if (_viewmodel.layers[j].label === RViewApp.#document1.layers[i].label) {
+        for (let j = 0; j < this._viewmodel.layers.length; j++) {
+          if (this._viewmodel.layers[j].label === this.#document1.layers[i].label) {
             addToList = false
             break
           }
         }
-        if (addToList) compareList.push(RViewApp.#document1.layers[i])
+        if (addToList) compareList.push(this.#document1.layers[i])
       }
-      _viewmodel.layers = _viewmodel.layers.concat(compareList)
+      this._viewmodel.layers = this._viewmodel.layers.concat(compareList)
     }
-    if (RViewApp.#document2 != null) {
+    if (this.#document2 != null) {
       let compareList = []
-      for (let i = 0; i < RViewApp.#document2.layers.length; i++) {
+      for (let i = 0; i < this.#document2.layers.length; i++) {
         let addToList = true
-        for (let j = 0; j < _viewmodel.layers.length; j++) {
-          if (_viewmodel.layers[j].label === RViewApp.#document2.layers[i].label) {
+        for (let j = 0; j < this._viewmodel.layers.length; j++) {
+          if (this._viewmodel.layers[j].label === this.#document2.layers[i].label) {
             addToList = false
             break
           }
         }
-        if (addToList) compareList.push(RViewApp.#document2.layers[i])
+        if (addToList) compareList.push(this.#document2.layers[i])
       }
-      _viewmodel.layers = _viewmodel.layers.concat(compareList)
+      this._viewmodel.layers = this._viewmodel.layers.concat(compareList)
     }
 
     let labelDiv = document.getElementById('labels')
     if (labelDiv != null) labelDiv.innerHTML = ''
 
-    if (RViewApp.#document1 != null || RViewApp.#document2 != null) {
-      RViewApp.updateVisibility()
-      RViewApp.getDisplayPipeline().zoomExtents(true)
+    if (this.#document1 != null || this.#document2 != null) {
+      this.updateVisibility()
+      this.getDisplayPipeline().zoomExtents(true)
       // Make sure the render loop is running
-      requestAnimationFrame(() => RViewApp.renderLoop())
+      requestAnimationFrame(() => this.renderLoop())
     }
     return true
   }
 
-  static getDisplayPipeline () {
-    if (RViewApp.#displayPipeline == null) {
-      if (RViewApp.#glElementId === '') throw new Error('no element defined for WebGL')
-      RViewApp.#displayPipeline = new DisplayPipeline(document.getElementById(RViewApp.#glElementId))
+  getDisplayPipeline () {
+    if (this.#displayPipeline == null) {
+      if (this.#glElementId === '') throw new Error('no element defined for WebGL')
+      this.#displayPipeline = new DisplayPipeline(document.getElementById(this.#glElementId))
     }
-    return RViewApp.#displayPipeline
+    return this.#displayPipeline
   }
 
-  static getRhino3dm () {
-    return RViewApp.#rhino3dm
+  getRhino3dm () {
+    return this.#rhino3dm
   }
 
-  static viewModel () {
-    return _viewmodel
+  viewModel () {
+    return this._viewmodel
   }
 
-  static updateVisibility () {
-    _viewmodel.layers.forEach((layer) => {
-      RViewApp.getSceneObjectsOnLayer(layer.label, true, false).forEach((obj) => {
+  updateVisibility () {
+    this._viewmodel.layers.forEach((layer) => {
+      this.getSceneObjectsOnLayer(layer.label, true, false).forEach((obj) => {
         obj.visible = layer.visible
         if (obj.visible && obj.type === 'Mesh') {
-          obj.visible = _viewmodel.model1.displayAttrs.shading
+          obj.visible = this._viewmodel.model1.displayAttrs.shading
         }
         if (obj.visible && obj.userData['surfaceWires']) {
-          obj.visible = _viewmodel.model1.displayAttrs.wires
+          obj.visible = this._viewmodel.model1.displayAttrs.wires
         }
       })
-      RViewApp.getSceneObjectsOnLayer(layer.label, false, true).forEach((obj) => {
+      this.getSceneObjectsOnLayer(layer.label, false, true).forEach((obj) => {
         obj.visible = layer.visible
         if (obj.visible && obj.type === 'Mesh') {
-          obj.visible = _viewmodel.model2.displayAttrs.shading
+          obj.visible = this._viewmodel.model2.displayAttrs.shading
         }
         if (obj.visible && obj.userData['surfaceWires']) {
-          obj.visible = _viewmodel.model2.displayAttrs.wires
+          obj.visible = this._viewmodel.model2.displayAttrs.wires
         }
       })
     })
 
-    if (RViewApp.#displayPipeline != null) RViewApp.#displayPipeline.setDirtyFlag()
+    if (this.#displayPipeline != null) this.#displayPipeline.setDirtyFlag()
   }
 
-  static getActiveModel () {
-    return RViewApp.#document1
+  getActiveModel () {
+    return this.#document1
   }
 
-  static getSceneObjectsOnLayer (rootLayerName, forModel1, forModel2) {
+  getSceneObjectsOnLayer (rootLayerName, forModel1, forModel2) {
     let objects = []
-    if (RViewApp.#document1 != null && forModel1) {
-      const activeDocObjects = RViewApp.#document1.getSceneObjectsOnLayer(rootLayerName)
+    if (this.#document1 != null && forModel1) {
+      const activeDocObjects = this.#document1.getSceneObjectsOnLayer(rootLayerName)
       if (activeDocObjects != null) objects = objects.concat(activeDocObjects)
     }
-    if (RViewApp.#document2 != null && forModel2) {
-      const compareDocObjects = RViewApp.#document2.getSceneObjectsOnLayer(rootLayerName)
+    if (this.#document2 != null && forModel2) {
+      const compareDocObjects = this.#document2.getSceneObjectsOnLayer(rootLayerName)
       if (compareDocObjects != null) objects = objects.concat(compareDocObjects)
     }
     return objects
   }
 
-  static visibleObjectsBoundingBox () {
+  visibleObjectsBoundingBox () {
     let bbox = null
-    _viewmodel.layers.forEach((layer) => {
+    this._viewmodel.layers.forEach((layer) => {
       if (!layer.visible) {
         return
       }
-      let objects = RViewApp.getSceneObjectsOnLayer(layer.label, true, true)
+      let objects = this.getSceneObjectsOnLayer(layer.label, true, true)
       if (objects == null) {
         return
       }
@@ -242,19 +250,21 @@ export default class RViewApp {
    * Private method called by the browser's animation redraw system. This
    * method is used to constantly redraw the WebGL viewport
    */
-  static renderLoop () {
+  renderLoop () {
     // constantly requeue a redraw
-    requestAnimationFrame(() => RViewApp.renderLoop())
+    requestAnimationFrame(() => this.renderLoop())
     // don't draw if there is no pipeline to draw
-    if (RViewApp.#displayPipeline == null) return
-    if (RViewApp.#document1 == null && RViewApp.#document2 == null) return
+    if (this.#displayPipeline == null) return
+    if (this.#document1 == null && this.#document2 == null) return
 
-    RViewApp.#displayPipeline.drawFrameBuffer(
-      _viewmodel.showGrid,
+    this.#displayPipeline.drawFrameBuffer(
+      this._viewmodel.showGrid,
       _modes[0],
-      RViewApp.#document1,
-      RViewApp.#document2,
-      _viewmodel.compareMode,
-      _viewmodel.comparePosition)
+      this.#document1,
+      this.#document2,
+      this._viewmodel.compareMode,
+      this._viewmodel.comparePosition)
   }
 }
+
+export default (new RViewApp())

@@ -41,10 +41,9 @@ import RViewApp from '../RViewApp'
 
 export default {
   data () {
-    const vm = RViewApp.viewModel()
     return {
       panMode: false,
-      viewmodel: vm
+      viewmodel: RViewApp._viewmodel
     }
   },
   props: {
