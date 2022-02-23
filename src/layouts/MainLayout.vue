@@ -31,7 +31,7 @@
 
         <q-toolbar-title>
         </q-toolbar-title>
-        <div>{{title}}</div>
+        <div>{{title()}}</div>
       </q-toolbar>
     </q-header>
 
@@ -43,7 +43,7 @@
       <q-list bordered>
         <q-item>
           <q-item-section>
-            {{model1Label}}
+            {{model1Label()}}
           </q-item-section>
           <q-item-section side top v-if="viewmodel.model1.exists">
             <q-btn flat round color="primary" icon="o_info" size="sm">
@@ -79,7 +79,7 @@
       <q-list>
         <q-item>
           <q-item-section>
-            {{model2Label}}
+            {{model2Label()}}
           </q-item-section>
           <q-item-section side top v-if="viewmodel.model2.exists">
             <q-btn flat round color="primary" icon="o_info" size="sm">
@@ -225,6 +225,7 @@ export default {
 
     function title () {
       let t = RViewApp.applicationTitle()
+      console.log('title:', t)
       if (viewmodel.value.model1.name.length > 0) {
         t = viewmodel.value.model1.name
         if (viewmodel.value.model2.name.length > 0) {
