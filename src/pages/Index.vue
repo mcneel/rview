@@ -25,8 +25,8 @@
         </q-fab-action>
         <q-fab-action
           color="primary"
-          :icon="perspectiveCamera ? 'img:icons/2D.svg' : 'img:icons/3D.svg'"
-          @click="setProjection(!perspectiveCamera)">
+          :icon="perspectiveCamera() ? 'img:icons/2D.svg' : 'img:icons/3D.svg'"
+          @click="setProjection(!perspectiveCamera())">
         </q-fab-action>
       </q-fab>
     </q-page-sticky>
@@ -38,46 +38,41 @@
 
 <script>
 import RViewApp from '../RViewApp'
-
+import { ref, onMounted, onBeforeMount, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 export default {
-  data () {
-    const vm = RViewApp.viewModel()
-    return {
-      panMode: false,
-      viewmodel: vm
+  setup () {
+    const panMode = ref(false)
+    const viewmodel = ref(RViewApp._viewmodel)
+    const url = ref('')
+
+    const route = useRoute()
+
+    const docExists = computed(() => {
+      return true
+      // does not recompute
+      // return viewmodel.value.model1.exists
+    })
+
+    const showCompareSlider = computed(() => {
+      return viewmodel.value.model1.exists && viewmodel.value.model2.exists
+    })
+
+    function perspectiveCamera () {
+      return viewmodel.value.perspectiveCamera
     }
-  },
-  props: {
-    url: { type: String, default: '' }
-  },
-  computed: {
-    docExists () {
-      return this.viewmodel.model1.exists
-    },
-    perspectiveCamera () {
-      return this.viewmodel.perspectiveCamera
-    },
-    showCompareSlider () {
-      return this.viewmodel.model1.exists && this.viewmodel.model2.exists
-    }
-  },
-  created () {
-    RViewApp.registerWebGlElement('canvasParent')
-  },
-  mounted () {
-    if (this.$route.query && this.$route.query['url']) {
-      this.openURL(this.$route.query['url'])
-    }
-  },
-  watch: {
-    $route (to, from) {
-      if (to.query['url']) {
-        this.openURL(to.query['url'])
+
+    onBeforeMount(() => {
+      RViewApp.registerWebGlElement('canvasParent')
+    })
+
+    onMounted(() => {
+      if (route.query && route.query['url']) {
+        this.openURL(route.query['url'])
       }
-    }
-  },
-  methods: {
-    openURL (url) {
+    })
+
+    function openURL (url) {
       fetch(url).then(async res => {
         if (res.status === 200) {
           const buffer = await res.arrayBuffer()
@@ -86,22 +81,46 @@ export default {
           alert(`Error retrieving resource.\n${res.status}`)
         }
       }).catch(e => alert(`Error:.\n${e}`))
-    },
-    zoomExtents () {
+    }
+
+    function zoomExtents () {
       RViewApp.getDisplayPipeline().zoomExtents(false)
-    },
-    togglePan () {
-      this.panMode = !this.panMode
-      this.setLeftButtonMode()
-    },
-    setProjection (perspective) {
+    }
+
+    function togglePan () {
+      panMode.value = !panMode.value
+      setLeftButtonMode()
+    }
+
+    function setProjection (perspective) {
       if (RViewApp.viewModel().perspectiveCamera === perspective) return
       RViewApp.viewModel().perspectiveCamera = perspective
       RViewApp.getDisplayPipeline().zoomExtents(true)
-      this.setLeftButtonMode()
-    },
-    setLeftButtonMode () {
-      RViewApp.getDisplayPipeline().setPanMode(this.panMode || !RViewApp.viewModel().perspectiveCamera)
+      setLeftButtonMode()
+    }
+
+    function setLeftButtonMode () {
+      RViewApp.getDisplayPipeline().setPanMode(panMode.value || !RViewApp.viewModel().perspectiveCamera)
+    }
+
+    watch(route, (to, from) => {
+      if (to.query['url']) {
+        this.openURL(to.query['url'])
+      }
+    })
+
+    return {
+      panMode,
+      viewmodel,
+      url,
+      docExists,
+      perspectiveCamera,
+      showCompareSlider,
+      openURL,
+      zoomExtents,
+      togglePan,
+      setProjection,
+      setLeftButtonMode
     }
   }
 }

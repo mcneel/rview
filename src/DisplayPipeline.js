@@ -90,9 +90,9 @@ export default class DisplayPipeline {
       this.#camera.updateProjectionMatrix()
       this.#renderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
       this.#labelRenderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
-    }
 
-    this.#frameSize = [this.#parentElement.clientWidth, this.#parentElement.clientHeight]
+      this.#frameSize = [this.#parentElement.clientWidth, this.#parentElement.clientHeight]
+    }
 
     this.#controls.update()
     SceneUtilities.viewportSize.width = viewportWidth

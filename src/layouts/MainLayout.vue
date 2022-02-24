@@ -31,7 +31,7 @@
 
         <q-toolbar-title>
         </q-toolbar-title>
-        <div>{{title}}</div>
+        <div>{{title()}}</div>
       </q-toolbar>
     </q-header>
 
@@ -43,7 +43,7 @@
       <q-list bordered>
         <q-item>
           <q-item-section>
-            {{model1Label}}
+            {{model1Label()}}
           </q-item-section>
           <q-item-section side top v-if="viewmodel.model1.exists">
             <q-btn flat round color="primary" icon="o_info" size="sm">
@@ -79,7 +79,7 @@
       <q-list>
         <q-item>
           <q-item-section>
-            {{model2Label}}
+            {{model2Label()}}
           </q-item-section>
           <q-item-section side top v-if="viewmodel.model2.exists">
             <q-btn flat round color="primary" icon="o_info" size="sm">
@@ -189,66 +189,62 @@
 <script>
 import RViewApp from '../RViewApp'
 import DisplayMode from '../DisplayMode'
-
+import { ref } from 'vue'
 export default {
-  data () {
-    let vm = RViewApp.viewModel()
-    return {
-      layerDrawerVisible: false,
-      fileDrawerVisible: true,
-      viewDrawerVisible: false,
-      viewmodel: vm,
-      drawers: { FILE: 1, LAYER: 2, VIEW: 3 },
-      backgroundModes: DisplayMode.backgroundModes
+  setup () {
+    const layerDrawerVisible = ref(false)
+    const fileDrawerVisible = ref(true)
+    const viewDrawerVisible = ref(false)
+    const viewmodel = ref(RViewApp._viewmodel)
+    const drawers = { FILE: 1, LAYER: 2, VIEW: 3 }
+    const backgroundModes = DisplayMode.backgroundModes
+    const insetLevel = 0.3
+    const sampleModels = [
+      'RhinoLogo.3dm',
+      'RhinoLogoSubD.3dm',
+      'Clip.3dm',
+      'Drill.3dm',
+      'Ring.3dm',
+      'Teacup.3dm',
+      'Teapots.3dm'
+    ]
+
+    function modelExists () {
+      return viewmodel.value.model1.exists || viewmodel.value.model2.exists
     }
-  },
-  computed: {
-    insetLevel () {
-      return 0.3
-    },
-    modelExists () {
-      return this.viewmodel.model1.exists || this.viewmodel.model2.exists
-    },
-    model1Label () {
-      if (this.viewmodel.model1.exists) return 'Model 1: ' + this.viewmodel.model1.name
+
+    function model1Label () {
+      if (viewmodel.value.model1.exists) return 'Model 1: ' + viewmodel.value.model1.name
       return 'Model 1: (none)'
-    },
-    model2Label () {
-      if (this.viewmodel.model2.exists) return 'Model 2: ' + this.viewmodel.model2.name
+    }
+
+    function model2Label () {
+      if (viewmodel.value.model2.exists) return 'Model 2: ' + viewmodel.value.model2.name
       return 'Model 2: (none)'
-    },
-    sampleModels () {
-      return [
-        'RhinoLogo.3dm',
-        'RhinoLogoSubD.3dm',
-        'Clip.3dm',
-        'Drill.3dm',
-        'Ring.3dm',
-        'Teacup.3dm',
-        'Teapots.3dm'
-      ]
-    },
-    title () {
+    }
+
+    function title () {
       let t = RViewApp.applicationTitle()
-      if (this.viewmodel.model1.name.length > 0) {
-        t = this.viewmodel.model1.name
-        if (this.viewmodel.model2.name.length > 0) {
-          t += ' | ' + this.viewmodel.model2.name
+      console.log('title:', t)
+      if (viewmodel.value.model1.name.length > 0) {
+        t = viewmodel.value.model1.name
+        if (viewmodel.value.model2.name.length > 0) {
+          t += ' | ' + viewmodel.value.model2.name
         }
       }
       return t
     }
-  },
-  methods: {
-    toggleDrawer (drawer) {
-      this.fileDrawerVisible = (drawer === this.drawers.FILE) ? !this.fileDrawerVisible : false
-      this.layerDrawerVisible = (drawer === this.drawers.LAYER) ? !this.layerDrawerVisible : false
-      this.viewDrawerVisible = (drawer === this.drawers.VIEW) ? !this.viewDrawerVisible : false
-    },
-    closeModel (model1) {
+
+    function toggleDrawer (drawer) {
+      fileDrawerVisible.value = (drawer === drawers.FILE) ? !fileDrawerVisible.value : false
+      layerDrawerVisible.value = (drawer === drawers.LAYER) ? !layerDrawerVisible.value : false
+      viewDrawerVisible.value = (drawer === drawers.VIEW) ? !viewDrawerVisible.value : false
+    }
+
+    function closeModel (model1) {
       RViewApp.closeModel(model1)
-    },
-    openSample (name, asModel1) {
+    }
+    function openSample (name, asModel1) {
       const path = 'samples/' + name
       fetch(path).then((res) => {
         let bufferPromise = res.arrayBuffer()
@@ -257,8 +253,8 @@ export default {
           this.fileDrawerVisible = false
         })
       })
-    },
-    openFile (asModel1) {
+    }
+    function openFile (asModel1) {
       let fileInput = document.createElement('input')
       const localVM = this
       let readFile = function (e) {
@@ -288,10 +284,137 @@ export default {
         view: window
       })
       fileInput.dispatchEvent(eventMouse)
-    },
-    updateVisibility () {
+    }
+    function updateVisibility () {
       RViewApp.updateVisibility()
+    }
+    return {
+      layerDrawerVisible,
+      fileDrawerVisible,
+      viewDrawerVisible,
+      viewmodel,
+      drawers,
+      backgroundModes,
+      insetLevel,
+      modelExists,
+      model1Label,
+      model2Label,
+      sampleModels,
+      title,
+      toggleDrawer,
+      closeModel,
+      openSample,
+      openFile,
+      updateVisibility
     }
   }
 }
+
+// import RViewApp from '../RViewApp'
+// import DisplayMode from '../DisplayMode'
+
+// export default {
+//   data () {
+//     return {
+//       layerDrawerVisible: false,
+//       fileDrawerVisible: true,
+//       viewDrawerVisible: false,
+//       viewmodel: RViewApp._viewmodel,
+//       drawers: { FILE: 1, LAYER: 2, VIEW: 3 },
+//       backgroundModes: DisplayMode.backgroundModes
+//     }
+//   },
+//   computed: {
+//     insetLevel () {
+//       return 0.3
+//     },
+//     modelExists () {
+//       // console.log('computed computing:', RViewApp)
+//       return this.viewmodel.model1.exists || this.viewmodel.model2.exists
+//     },
+//     model1Label () {
+//       if (this.viewmodel.model1.exists) return 'Model 1: ' + this.viewmodel.model1.name
+//       return 'Model 1: (none)'
+//     },
+//     model2Label () {
+//       if (this.viewmodel.model2.exists) return 'Model 2: ' + this.viewmodel.model2.name
+//       return 'Model 2: (none)'
+//     },
+//     sampleModels () {
+//       return [
+//         'RhinoLogo.3dm',
+//         'RhinoLogoSubD.3dm',
+//         'Clip.3dm',
+//         'Drill.3dm',
+//         'Ring.3dm',
+//         'Teacup.3dm',
+//         'Teapots.3dm'
+//       ]
+//     },
+//     title () {
+//       let t = RViewApp.applicationTitle()
+//       if (this.viewmodel.model1.name.length > 0) {
+//         t = this.viewmodel.model1.name
+//         if (this.viewmodel.model2.name.length > 0) {
+//           t += ' | ' + this.viewmodel.model2.name
+//         }
+//       }
+//       return t
+//     }
+//   },
+//   methods: {
+//     toggleDrawer (drawer) {
+//       this.fileDrawerVisible = (drawer === this.drawers.FILE) ? !this.fileDrawerVisible : false
+//       this.layerDrawerVisible = (drawer === this.drawers.LAYER) ? !this.layerDrawerVisible : false
+//       this.viewDrawerVisible = (drawer === this.drawers.VIEW) ? !this.viewDrawerVisible : false
+//     },
+//     closeModel (model1) {
+//       RViewApp.closeModel(model1)
+//     },
+//     openSample (name, asModel1) {
+//       const path = 'samples/' + name
+//       fetch(path).then((res) => {
+//         let bufferPromise = res.arrayBuffer()
+//         bufferPromise.then((buffer) => {
+//           RViewApp.openFile(name, new Uint8Array(buffer), asModel1)
+//           this.fileDrawerVisible = false
+//         })
+//       })
+//     },
+//     openFile (asModel1) {
+//       let fileInput = document.createElement('input')
+//       const localVM = this
+//       let readFile = function (e) {
+//         let file = e.target.files[0]
+//         if (!file) { return }
+//         let reader = new FileReader()
+//         reader.onload = function (e) {
+//           var contents = e.target.result
+//           const openSuccess = RViewApp.openFile(file.name, contents, asModel1)
+//           document.body.removeChild(fileInput)
+//           if (openSuccess) localVM.fileDrawerVisible = false
+//         }
+//         if (file.name.endsWith('.obj') || file.name.endsWith('.ply')) {
+//           reader.readAsText(file)
+//         } else {
+//           reader.readAsArrayBuffer(file)
+//         }
+//       }
+//       fileInput.type = 'file'
+//       fileInput.accept = '.3dm, .obj, .drc, .ply'
+//       fileInput.style.display = 'none'
+//       fileInput.onchange = readFile
+//       document.body.appendChild(fileInput)
+//       let eventMouse = new MouseEvent('click', {
+//         bubbles: true,
+//         cancelable: true,
+//         view: window
+//       })
+//       fileInput.dispatchEvent(eventMouse)
+//     },
+//     updateVisibility () {
+//       RViewApp.updateVisibility()
+//     }
+//   }
+// }
 </script>

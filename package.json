@@ -12,6 +12,7 @@
   "dependencies": {
     "@quasar/extras": "^1.10.5",
     "core-js": "^3.0.0",
+    "lodash": "^4.17.21",
     "quasar": "2",
     "three": "^0.120.0",
     "vue": "3",
