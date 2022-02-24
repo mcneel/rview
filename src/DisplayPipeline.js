@@ -45,6 +45,7 @@ export default class DisplayPipeline {
     this.#renderer.setPixelRatio(window.devicePixelRatio)
     this.#renderer.setSize(parentElement.clientWidth, parentElement.clientHeight)
     this.#parentElement = parentElement
+    this.#parentElement.innerHTML = '' // workaround to hide logo
     this.#parentElement.appendChild(this.#renderer.domElement)
 
     this.#labelRenderer = new CSS2DRenderer()

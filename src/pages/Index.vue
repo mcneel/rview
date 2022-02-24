@@ -49,9 +49,8 @@ export default {
     const route = useRoute()
 
     const docExists = computed(() => {
-      return true
       // does not recompute
-      // return viewmodel.value.model1.exists
+      return viewmodel.value.model1.exists
     })
 
     const showCompareSlider = computed(() => {
