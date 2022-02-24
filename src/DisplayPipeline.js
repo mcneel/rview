@@ -45,6 +45,7 @@ export default class DisplayPipeline {
     this.#renderer.setPixelRatio(window.devicePixelRatio)
     this.#renderer.setSize(parentElement.clientWidth, parentElement.clientHeight)
     this.#parentElement = parentElement
+    this.#parentElement.innerHTML = '' // workaround to hide logo
     this.#parentElement.appendChild(this.#renderer.domElement)
 
     this.#labelRenderer = new CSS2DRenderer()
@@ -83,7 +84,6 @@ export default class DisplayPipeline {
     let viewportWidth = this.#parentElement.clientWidth
     let viewportHeight = this.#parentElement.clientHeight
     const windowResize = this.#frameSize[0] !== this.#parentElement.clientWidth || this.#frameSize[1] !== this.#parentElement.clientHeight
-    this.#frameSize = [this.#parentElement.clientWidth, this.#parentElement.clientHeight]
 
     if (windowResize) {
       dirty = true
@@ -91,7 +91,10 @@ export default class DisplayPipeline {
       this.#camera.updateProjectionMatrix()
       this.#renderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
       this.#labelRenderer.setSize(this.#parentElement.clientWidth, this.#parentElement.clientHeight)
+
+      this.#frameSize = [this.#parentElement.clientWidth, this.#parentElement.clientHeight]
     }
+
     this.#controls.update()
     SceneUtilities.viewportSize.width = viewportWidth
     SceneUtilities.viewportSize.height = viewportHeight

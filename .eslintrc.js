@@ -2,7 +2,7 @@ module.exports = {
   root: true,
 
   parserOptions: {
-    parser: 'babel-eslint',
+    parser: '@babel/eslint-parser',
     sourceType: 'module'
   },
 
@@ -13,13 +13,15 @@ module.exports = {
   extends: [
     // https://eslint.vuejs.org/rules/#priority-a-essential-error-prevention
     // consider switching to `plugin:vue/strongly-recommended` or `plugin:vue/recommended` for stricter rules.
-    'plugin:vue/essential',
-    '@vue/standard'
+    'plugin:vue/vue3-essential',
+    '@vue/standard',
+    'plugin:quasar/standard'
   ],
 
   // required to lint *.vue files
   plugins: [
-    'vue'
+    'vue',
+    'quasar'
   ],
 
   globals: {
@@ -50,6 +52,10 @@ module.exports = {
     'prefer-promise-reject-errors': 'off',
 
     // allow debugger during development only
-    'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off'
+    'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off',
+
+    // linting for quasar
+    // 'quasar/no-invalid-props': 'error',
+    'quasar/no-invalid-qfield-usage': 'error'
   }
 }
