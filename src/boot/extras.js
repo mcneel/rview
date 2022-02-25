@@ -1,7 +1,7 @@
 let privateModule = {}
 
 try {
-  privateModule = require('./_privateModule')
+  privateModule = require('../../../inject/_module')
 } catch (e) {
 }
 
