@@ -1,6 +1,7 @@
 import DisplayPipeline from './DisplayPipeline'
 import RViewDoc from './RViewDoc'
 import DisplayMode from './DisplayMode'
+import { privateModule } from 'boot/extras'
 
 let _cachedDoc = null
 let _modes = DisplayMode.defaultModes()
@@ -58,6 +59,9 @@ class RViewApp {
   }
 
   applicationTitle () {
+    if (privateModule && privateModule.version) {
+      return `rview WIP ${privateModule.version}`
+    }
     return 'rview WIP'
   }
 
